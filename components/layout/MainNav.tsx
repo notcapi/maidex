@@ -39,6 +39,11 @@ export function MainNav() {
     { href: "/chat", label: "Chat" },
   ];
 
+  // Manejar el cierre de sesión
+  const handleSignOut = () => {
+    signOut({ callbackUrl: '/' });
+  };
+
   return (
     <div className="border-b bg-background">
       <div className="flex h-16 items-center px-4 max-w-7xl mx-auto">
@@ -81,7 +86,7 @@ export function MainNav() {
               </Avatar>
               <Button
                 variant="outline"
-                onClick={() => signOut()}
+                onClick={handleSignOut}
                 size="sm"
                 className="text-foreground border-border hover:bg-muted"
               >
@@ -153,7 +158,7 @@ export function MainNav() {
                 {session ? (
                   <Button 
                     variant="outline" 
-                    onClick={() => signOut()}
+                    onClick={handleSignOut}
                     className="w-full text-foreground border-border hover:bg-muted"
                   >
                     Cerrar Sesión
