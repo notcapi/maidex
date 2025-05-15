@@ -335,6 +335,27 @@ function extractDriveOperation(text: string): any {
     }
   }
   
+  // Descargar un archivo
+  if (lowerText.includes('descarga') || lowerText.includes('obtén') || 
+     (lowerText.includes('descargar') && lowerText.includes('archivo'))) {
+    const fileIdMatch = text.match(/(?:descarga|descargar|obtén|obtener) (?:el )?(?:archivo|documento|fichero) (?:con id|con identificador|id)? ['"]?([a-zA-Z0-9_-]+)['"]?/i);
+    const fileNameMatch = text.match(/(?:descarga|descargar|obtén|obtener) (?:el )?(?:archivo|documento|fichero) (?:llamado|con nombre|nombrado) ['"]?([a-zA-Z0-9\s._-]+)['"]?/i);
+    
+    if (fileIdMatch) {
+      return {
+        operation: 'get',
+        fileId: fileIdMatch[1].trim(),
+        rawDownload: true
+      };
+    } else if (fileNameMatch) {
+      return {
+        operation: 'search',
+        query: fileNameMatch[1].trim(),
+        includeDownloadLink: true
+      };
+    }
+  }
+  
   // Obtener un archivo por ID
   const fileIdMatch = text.match(/(?:obtén|obtener|muestra|mostrar|abre|abrir) (?:el )?(?:archivo|documento) (?:con id|con identificador|id)? ['"]?([a-zA-Z0-9_-]+)['"]?/i);
   if (fileIdMatch) {

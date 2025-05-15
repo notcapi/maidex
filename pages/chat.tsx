@@ -9,12 +9,22 @@ import { useToast } from '@/hooks/use-toast';
 import { SpeechRecognition } from '@/components/ui/speech-recognition';
 import TextareaAutosize from 'react-textarea-autosize';
 
+// Añadir este tipo para el manejo de archivos de Drive
+type DriveFileInfo = {
+  id: string;
+  name: string;
+  mimeType: string;
+};
+
 type Message = {
   id: number;
   content: string;
   isUser: boolean;
   timestamp: Date;
   action?: 'send_email' | 'create_event' | 'gdrive_operations';
+  // Añadir campos para archivos de Drive
+  driveFiles?: DriveFileInfo[];
+  fileId?: string;
 };
 
 export default function Chat() {
@@ -162,24 +172,84 @@ export default function Chat() {
               const fileCount = result.result.files?.length || 0;
               const fileList = result.result.files?.map((file: any) => `- ${file.name}`).join('\n');
               responseMessage = `He encontrado ${fileCount} archivos en tu Google Drive:\n\n${fileList}`;
+              
+              // Añadir información de archivos para posible descarga
+              const driveFiles = result.result.files?.map((file: any) => ({
+                id: file.id,
+                name: file.name,
+                mimeType: file.mimeType
+              }));
+              
               toast({
                 title: "Archivos listados",
                 description: `${fileCount} archivos encontrados`,
               });
+              
+              // Añadir respuesta del sistema con la lista de archivos
+              setMessages(prevMessages => [
+                ...prevMessages, 
+                {
+                  id: prevMessages.length + 2,
+                  content: responseMessage,
+                  isUser: false,
+                  timestamp: new Date(),
+                  driveFiles: driveFiles
+                }
+              ]);
+              
+              return; // Salir temprano ya que hemos manejado esto de forma especial
             } else if (result.params.operation === 'search') {
               const fileCount = result.result.files?.length || 0;
               const fileList = result.result.files?.map((file: any) => `- ${file.name}`).join('\n');
               responseMessage = `He encontrado ${fileCount} archivos que coinciden con tu búsqueda:\n\n${fileList}`;
+              
+              // Añadir información de archivos para posible descarga
+              const driveFiles = result.result.files?.map((file: any) => ({
+                id: file.id,
+                name: file.name,
+                mimeType: file.mimeType
+              }));
+              
               toast({
                 title: "Búsqueda completada",
                 description: `${fileCount} archivos encontrados`,
               });
+              
+              // Añadir respuesta del sistema con los resultados de búsqueda
+              setMessages(prevMessages => [
+                ...prevMessages, 
+                {
+                  id: prevMessages.length + 2,
+                  content: responseMessage,
+                  isUser: false,
+                  timestamp: new Date(),
+                  driveFiles: driveFiles
+                }
+              ]);
+              
+              return; // Salir temprano ya que hemos manejado esto de forma especial
             } else if (result.params.operation === 'get') {
               responseMessage = `He recuperado el archivo "${result.result.file?.name || 'solicitado'}"`;
+              const fileId = result.params.fileId;
+              
               toast({
                 title: "Archivo recuperado",
                 description: result.result.file?.name || "Archivo",
               });
+              
+              // Añadir respuesta del sistema con el archivo que puede descargarse
+              setMessages(prevMessages => [
+                ...prevMessages, 
+                {
+                  id: prevMessages.length + 2,
+                  content: responseMessage,
+                  isUser: false,
+                  timestamp: new Date(),
+                  fileId: fileId
+                }
+              ]);
+              
+              return; // Salir temprano ya que hemos manejado esto de forma especial
             } else if (result.params.operation === 'create') {
               responseMessage = `He creado el archivo "${result.params.name}"`;
               toast({
@@ -424,6 +494,47 @@ export default function Chat() {
                 }`}
               >
                 <div className="whitespace-pre-wrap">{message.content}</div>
+                
+                {/* Mostrar botones de descarga para archivos individuales */}
+                {!message.isUser && message.fileId && (
+                  <div className="mt-2">
+                    <a 
+                      href={`/api/drive/download?fileId=${message.fileId}`} 
+                      target="_blank"
+                      className="inline-flex items-center px-3 py-1 bg-primary text-primary-foreground text-xs rounded hover:bg-primary/90"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                      </svg>
+                      Descargar archivo
+                    </a>
+                  </div>
+                )}
+                
+                {/* Mostrar lista de archivos con botones de descarga */}
+                {!message.isUser && message.driveFiles && message.driveFiles.length > 0 && (
+                  <div className="mt-2 space-y-1">
+                    <p className="text-xs font-medium">Archivos disponibles:</p>
+                    <div className="flex flex-col gap-1">
+                      {message.driveFiles.map((file) => (
+                        <div key={file.id} className="flex items-center text-xs">
+                          <span className="truncate max-w-[200px]">{file.name}</span>
+                          <a 
+                            href={`/api/drive/download?fileId=${file.id}`}
+                            target="_blank"
+                            className="ml-2 inline-flex items-center px-2 py-1 bg-primary text-primary-foreground rounded hover:bg-primary/90"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                            </svg>
+                            Descargar
+                          </a>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
                 <div className={`text-xs mt-1 ${message.isUser ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
                   {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   {message.action && (

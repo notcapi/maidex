@@ -98,7 +98,7 @@ export class DriveAgent {
   /**
    * Obtiene un archivo específico de Google Drive
    */
-  async getFile(accessToken: string, fileId: string) {
+  async getFile(accessToken: string, fileId: string, rawDownload: boolean = false) {
     try {
       this.setupDriveClient(accessToken);
       
@@ -110,19 +110,27 @@ export class DriveAgent {
       
       const file = fileResponse.data;
       
-      // Si es un archivo de texto, obtener su contenido
-      if (file.mimeType === 'text/plain' || 
+      // Si es un archivo de texto o el usuario solicitó la descarga completa
+      if (rawDownload || 
+          file.mimeType === 'text/plain' || 
           file.mimeType === 'application/json' ||
           file.mimeType === 'text/html' ||
           file.mimeType === 'text/csv' ||
           file.mimeType === 'text/markdown') {
         
-        const contentResponse = await this.drive.files.get({
-          fileId,
-          alt: 'media'
-        });
-        
-        file.content = contentResponse.data;
+        try {
+          const contentResponse = await this.drive.files.get({
+            fileId,
+            alt: 'media'
+          }, {
+            responseType: rawDownload ? 'arraybuffer' : 'json'
+          });
+          
+          file.content = contentResponse.data;
+        } catch (downloadError) {
+          console.warn('No se pudo descargar el contenido del archivo:', downloadError);
+          // No fallamos todo, devolvemos los metadatos sin contenido
+        }
       }
       
       return {
@@ -282,7 +290,7 @@ export class DriveAgent {
         });
         
       case 'get':
-        return await this.getFile(accessToken, params.fileId);
+        return await this.getFile(accessToken, params.fileId, params.rawDownload);
         
       case 'create':
         return await this.createFile(accessToken, {

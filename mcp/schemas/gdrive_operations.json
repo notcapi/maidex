@@ -38,6 +38,11 @@
         "type": "integer",
         "description": "Número máximo de archivos a listar",
         "default": 10
+      },
+      "rawDownload": {
+        "type": "boolean",
+        "description": "Indica si se solicita la descarga completa del archivo",
+        "default": false
       }
     },
     "required": ["operation"],
