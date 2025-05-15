@@ -8,5 +8,6 @@
   ],
   "env": {
     "NEXTAUTH_URL": "${VERCEL_URL}"
-  }
+  },
+  "buildCommand": "npm install dotenv && npm run build"
 } 
