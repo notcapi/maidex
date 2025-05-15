@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { AnimatePresence, motion } from "framer-motion";
 
 interface SpeechRecognitionProps {
   onTranscript: (text: string) => void;
@@ -167,35 +169,67 @@ export function SpeechRecognition({
 
   if (!isSupported) {
     return (
-      <Button 
-        variant="outline" 
-        size="icon" 
-        type="button"
-        disabled 
-        title="Tu navegador no soporta reconocimiento de voz"
-      >
-        <MicIcon className="h-4 w-4 opacity-50" />
-      </Button>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button 
+              variant="outline" 
+              size="icon" 
+              type="button"
+              disabled 
+              className="h-10 w-10 rounded-full bg-secondary/30 backdrop-blur-sm text-muted-foreground"
+            >
+              <MicIcon className="h-4 w-4 opacity-50" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="top">
+            <p>Tu navegador no soporta reconocimiento de voz</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
     );
   }
 
   return (
-    <Button
-      variant="outline"
-      size="icon"
-      type="button"
-      onClick={(e) => {
-        e.preventDefault(); // Prevenir cualquier comportamiento predeterminado
-        toggleListening();
-      }}
-      title={isListening ? "Detener grabación" : "Grabar voz"}
-      className={isListening ? "bg-red-500 text-white hover:bg-red-600" : ""}
-    >
-      <MicIcon className="h-4 w-4" />
-      {isListening && (
-        <span className="absolute top-0 right-0 h-2 w-2 rounded-full bg-white animate-pulse" />
-      )}
-    </Button>
+    <div className="relative">
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="outline"
+              size="icon"
+              type="button"
+              onClick={(e) => {
+                e.preventDefault(); // Prevenir cualquier comportamiento predeterminado
+                toggleListening();
+              }}
+              className={isListening 
+                ? "h-10 w-10 rounded-full bg-red-500 text-white hover:bg-red-600 border-none shadow-md" 
+                : "h-10 w-10 rounded-full bg-background/30 backdrop-blur-sm hover:bg-background/80 border-border/50 shadow-sm"}
+            >
+              <MicIcon className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="top">
+            <p>{isListening ? "Detener grabación" : "Grabar voz"}</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+      
+      <AnimatePresence>
+        {isListening && (
+          <motion.div 
+            initial={{ opacity: 0, scale: 0 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0 }}
+            className="absolute top-0 right-0 h-3 w-3"
+          >
+            <span className="absolute top-0 right-0 h-3 w-3 rounded-full bg-red-500 animate-ping" />
+            <span className="absolute top-0 right-0 h-3 w-3 rounded-full bg-red-500" />
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
 
