@@ -80,6 +80,8 @@ export function SpeechRecognition({
                 // Si no hay transcripción final, usamos la provisional
                 accumulatedTranscriptRef.current = interimTranscript;
               }
+
+              console.log("Transcripción actual:", accumulatedTranscriptRef.current);
             } catch (e) {
               console.error("Error procesando resultados:", e);
             }
@@ -88,13 +90,7 @@ export function SpeechRecognition({
           recognition.onend = () => {
             console.log("Reconocimiento finalizado");
             
-            // Si se detuvo manualmente, enviar la transcripción
-            if (accumulatedTranscriptRef.current.trim()) {
-              onTranscript(accumulatedTranscriptRef.current.trim());
-              console.log("Transcripción enviada:", accumulatedTranscriptRef.current.trim());
-            }
-            
-            // Actualizar estado (siempre)
+            // NO enviar la transcripción aquí, solo actualizar estados
             setIsListening(false);
             if (onListening) onListening(false);
           };
@@ -143,7 +139,16 @@ export function SpeechRecognition({
         console.log("Intentando detener grabación...");
         recognitionRef.current.stop();
         console.log("Grabación detenida manualmente");
-        // No cambiamos el estado aquí, lo hacemos en el evento onend
+        
+        // Solo actualizamos el texto en el campo cuando se detiene manualmente
+        if (accumulatedTranscriptRef.current.trim()) {
+          const transcript = accumulatedTranscriptRef.current.trim();
+          console.log("Actualizando campo con transcripción:", transcript);
+          // Pequeño retraso para asegurar que el reconocimiento se ha detenido completamente
+          setTimeout(() => {
+            onTranscript(transcript);
+          }, 10);
+        }
       } else {
         // Iniciar grabación
         console.log("Intentando iniciar grabación...");
@@ -158,13 +163,14 @@ export function SpeechRecognition({
       setIsListening(false);
       if (onListening) onListening(false);
     }
-  }, [isListening, isSupported, onListening]);
+  }, [isListening, isSupported, onListening, onTranscript]);
 
   if (!isSupported) {
     return (
       <Button 
         variant="outline" 
         size="icon" 
+        type="button"
         disabled 
         title="Tu navegador no soporta reconocimiento de voz"
       >
@@ -177,7 +183,11 @@ export function SpeechRecognition({
     <Button
       variant="outline"
       size="icon"
-      onClick={toggleListening}
+      type="button"
+      onClick={(e) => {
+        e.preventDefault(); // Prevenir cualquier comportamiento predeterminado
+        toggleListening();
+      }}
       title={isListening ? "Detener grabación" : "Grabar voz"}
       className={isListening ? "bg-red-500 text-white hover:bg-red-600" : ""}
     >

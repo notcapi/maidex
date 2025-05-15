@@ -81,7 +81,10 @@ export default function Chat() {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
+    // Detener el comportamiento predeterminado del formulario
     e.preventDefault();
+    
+    // Validación adicional
     if (input.trim() === '') return;
 
     // Determinar si el mensaje implica una acción específica
@@ -290,7 +293,15 @@ export default function Chat() {
 
   // Función para manejar la transcripción de voz
   const handleTranscript = (text: string) => {
+    console.log("Recibida transcripción en chat:", text);
+    // Solo actualizamos el estado del input, no enviamos el formulario
     setInput(text);
+  };
+
+  // Función para manejar cuando se está escuchando
+  const handleListening = (isListeningNow: boolean) => {
+    console.log("Estado de escucha cambiado:", isListeningNow);
+    setIsListening(isListeningNow);
   };
 
   if (status === 'loading') {
@@ -378,7 +389,14 @@ export default function Chat() {
         <Separator />
         
         {/* Formulario de entrada */}
-        <form onSubmit={handleSubmit} className="p-4">
+        <form 
+          onSubmit={(e) => {
+            e.preventDefault(); // Prevenir envío por defecto
+            if (!input.trim()) return; // No enviar si está vacío
+            handleSubmit(e);
+          }} 
+          className="p-4"
+        >
           <div className="flex flex-col space-y-2">
             <div className="flex">
               <input
@@ -391,7 +409,7 @@ export default function Chat() {
               />
               <SpeechRecognition 
                 onTranscript={handleTranscript}
-                onListening={setIsListening}
+                onListening={handleListening}
               />
               <Button
                 type="submit"
