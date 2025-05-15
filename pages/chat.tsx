@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
+import { SpeechRecognition } from '@/components/ui/speech-recognition';
 
 type Message = {
   id: number;
@@ -21,6 +22,7 @@ export default function Chat() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isListening, setIsListening] = useState(false);
   const messagesEndRef = useRef<null | HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -286,6 +288,11 @@ export default function Chat() {
     }
   };
 
+  // Función para manejar la transcripción de voz
+  const handleTranscript = (text: string) => {
+    setInput(text);
+  };
+
   if (status === 'loading') {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -378,9 +385,13 @@ export default function Chat() {
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Escribe un mensaje..."
+                placeholder={isListening ? "Escuchando..." : "Escribe un mensaje..."}
                 className="flex-1 border rounded-l-md p-3 focus:outline-none focus:ring-2 focus:ring-primary"
-                disabled={loading}
+                disabled={loading || isListening}
+              />
+              <SpeechRecognition 
+                onTranscript={handleTranscript}
+                onListening={setIsListening}
               />
               <Button
                 type="submit"
