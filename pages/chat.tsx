@@ -7,6 +7,7 @@ import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import { SpeechRecognition } from '@/components/ui/speech-recognition';
+import TextareaAutosize from 'react-textarea-autosize';
 
 type Message = {
   id: number;
@@ -399,14 +400,27 @@ export default function Chat() {
         >
           <div className="flex flex-col space-y-2">
             <div className="flex">
-              <input
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder={isListening ? "Escuchando..." : "Escribe un mensaje..."}
-                className="flex-1 border rounded-l-md p-3 focus:outline-none focus:ring-2 focus:ring-primary"
-                disabled={loading || isListening}
-              />
+              <div className="flex-1 relative">
+                <TextareaAutosize
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  placeholder={isListening ? "Escuchando..." : "Escribe un mensaje..."}
+                  className="w-full border rounded-l-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-primary resize-none min-h-[42px] max-h-[150px]" 
+                  disabled={loading || isListening}
+                  minRows={1}
+                  maxRows={6}
+                  onKeyDown={(e) => {
+                    // Enviar con Shift+Enter
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      if (input.trim()) {
+                        const event = new Event('submit', { bubbles: true });
+                        e.currentTarget.form?.dispatchEvent(event);
+                      }
+                    }
+                  }}
+                />
+              </div>
               <SpeechRecognition 
                 onTranscript={handleTranscript}
                 onListening={handleListening}
