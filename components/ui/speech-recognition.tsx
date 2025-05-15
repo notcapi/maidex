@@ -16,106 +16,103 @@ export function SpeechRecognition({
 }: SpeechRecognitionProps) {
   const [isListening, setIsListening] = useState(false);
   const [isSupported, setIsSupported] = useState(true);
-  const [transcript, setTranscript] = useState("");
   const [error, setError] = useState<string | null>(null);
   
   // Referencia al objeto de reconocimiento de voz
   const recognitionRef = useRef<any>(null);
-  // Temporizador para detección de silencio
-  const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
   // Acumulador de transcripción
   const accumulatedTranscriptRef = useRef("");
 
+  // Inicializar reconocimiento de voz
   useEffect(() => {
-    // Verificar si el navegador soporta la API
     if (typeof window !== 'undefined') {
-      const SpeechRecognition = window.SpeechRecognition || 
-        (window as any).webkitSpeechRecognition;
-      
-      if (!SpeechRecognition) {
+      try {
+        const SpeechRecognition = window.SpeechRecognition || 
+          (window as any).webkitSpeechRecognition;
+        
+        if (!SpeechRecognition) {
+          console.error("API de reconocimiento de voz no soportada");
+          setIsSupported(false);
+          setError("Tu navegador no soporta reconocimiento de voz");
+          return;
+        }
+
+        // Crear instancia si no existe
+        if (!recognitionRef.current) {
+          const recognition = new SpeechRecognition();
+          recognition.continuous = true;
+          recognition.interimResults = true;
+          recognition.lang = 'es-ES';
+          
+          // Guardar referencia
+          recognitionRef.current = recognition;
+          
+          // Configurar eventos
+          recognition.onstart = () => {
+            console.log("Reconocimiento iniciado");
+            setIsListening(true);
+            if (onListening) onListening(true);
+            // Reiniciar transcripción acumulada
+            accumulatedTranscriptRef.current = "";
+          };
+          
+          recognition.onresult = (event: any) => {
+            try {
+              console.log("Evento de resultado recibido", event);
+              
+              let finalTranscript = '';
+              let interimTranscript = '';
+              
+              // Procesar todos los resultados
+              for (let i = 0; i < event.results.length; i++) {
+                const transcriptPiece = event.results[i][0].transcript;
+                if (event.results[i].isFinal) {
+                  finalTranscript += transcriptPiece;
+                } else {
+                  interimTranscript += transcriptPiece;
+                }
+              }
+              
+              // Actualizar transcripción acumulada
+              if (finalTranscript) {
+                accumulatedTranscriptRef.current = finalTranscript;
+              } else if (interimTranscript) {
+                // Si no hay transcripción final, usamos la provisional
+                accumulatedTranscriptRef.current = interimTranscript;
+              }
+            } catch (e) {
+              console.error("Error procesando resultados:", e);
+            }
+          };
+
+          recognition.onend = () => {
+            console.log("Reconocimiento finalizado");
+            
+            // Si fue detenido manualmente, enviar la transcripción
+            if (isListening) {
+              if (accumulatedTranscriptRef.current.trim()) {
+                onTranscript(accumulatedTranscriptRef.current.trim());
+                console.log("Transcripción enviada:", accumulatedTranscriptRef.current.trim());
+              }
+              
+              // Actualizar estado
+              setIsListening(false);
+              if (onListening) onListening(false);
+            }
+          };
+
+          recognition.onerror = (event: any) => {
+            console.error('Error en reconocimiento de voz:', event.error);
+            setError(`Error: ${event.error}`);
+            setIsListening(false);
+            if (onListening) onListening(false);
+          };
+        }
+      } catch (error) {
+        console.error("Error inicializando reconocimiento de voz:", error);
         setIsSupported(false);
-        setError("Tu navegador no soporta reconocimiento de voz");
-        return;
+        setError("Error al inicializar reconocimiento de voz");
       }
-
-      // Crear instancia de reconocimiento de voz
-      const recognition = new SpeechRecognition();
-      recognition.continuous = true; // Modo continuo
-      recognition.interimResults = true;
-      recognition.lang = 'es-ES'; // Configurar para español
-      recognition.maxAlternatives = 1;
-
-      // Guardar referencia
-      recognitionRef.current = recognition;
-
-      // Configurar eventos
-      recognition.onresult = (event: any) => {
-        // Reiniciar el temporizador de silencio cada vez que hay un resultado
-        if (silenceTimerRef.current) {
-          clearTimeout(silenceTimerRef.current);
-        }
-        
-        const current = event.resultIndex;
-        const currentTranscript = event.results[current][0].transcript;
-        console.log("Transcripción en curso:", currentTranscript);
-        
-        // Acumular transcripción para resultados intermedios
-        if (event.results[current].isFinal) {
-          accumulatedTranscriptRef.current += " " + currentTranscript;
-          accumulatedTranscriptRef.current = accumulatedTranscriptRef.current.trim();
-        }
-        
-        // Mostrar transcripción en curso
-        setTranscript(
-          accumulatedTranscriptRef.current + " " + 
-          (event.results[current].isFinal ? "" : currentTranscript)
-        );
-        
-        // Configurar temporizador de silencio (3 segundos sin hablar)
-        silenceTimerRef.current = setTimeout(() => {
-          if (isListening && recognitionRef.current) {
-            console.log("Silencio detectado, deteniendo grabación");
-            recognitionRef.current.stop();
-          }
-        }, 3000);
-      };
-
-      recognition.onend = () => {
-        console.log("Reconocimiento finalizado");
-        // Limpiar temporizador
-        if (silenceTimerRef.current) {
-          clearTimeout(silenceTimerRef.current);
-          silenceTimerRef.current = null;
-        }
-        
-        setIsListening(false);
-        if (onListening) onListening(false);
-        
-        // Si hay texto acumulado, enviarlo al componente padre
-        if (accumulatedTranscriptRef.current) {
-          onTranscript(accumulatedTranscriptRef.current);
-          setTranscript("");
-          accumulatedTranscriptRef.current = "";
-        }
-      };
-
-      recognition.onerror = (event: any) => {
-        console.error('Error en reconocimiento de voz:', event.error);
-        setError(`Error: ${event.error}`);
-        setIsListening(false);
-        if (onListening) onListening(false);
-        
-        // Limpiar temporizador
-        if (silenceTimerRef.current) {
-          clearTimeout(silenceTimerRef.current);
-          silenceTimerRef.current = null;
-        }
-      };
-      
-      // Evento para reintentar si hay una desconexión
-      recognition.onnomatch = () => {
-        console.log("No se ha encontrado coincidencia");
-      };
     }
 
     return () => {
@@ -127,40 +124,34 @@ export function SpeechRecognition({
           console.error("Error al abortar reconocimiento:", e);
         }
       }
-      
-      // Limpiar temporizador
-      if (silenceTimerRef.current) {
-        clearTimeout(silenceTimerRef.current);
-        silenceTimerRef.current = null;
-      }
     };
-  }, [onTranscript, onListening]);
+  }, [onListening, onTranscript]);
 
+  // Manejar inicio/parada manual
   const toggleListening = useCallback(() => {
-    if (!isSupported || !recognitionRef.current) return;
+    if (!isSupported || !recognitionRef.current) {
+      console.error("Reconocimiento no soportado o no inicializado");
+      return;
+    }
     
     setError(null);
-
-    if (isListening) {
-      // Detener manualmente la grabación
-      if (silenceTimerRef.current) {
-        clearTimeout(silenceTimerRef.current);
-        silenceTimerRef.current = null;
-      }
-      recognitionRef.current.stop();
-    } else {
-      // Iniciar grabación
-      accumulatedTranscriptRef.current = "";
-      setTranscript("");
-      try {
+    console.log("Cambiando estado de escucha:", !isListening);
+    
+    try {
+      if (isListening) {
+        // Detener grabación
+        recognitionRef.current.stop();
+        console.log("Grabación detenida manualmente");
+      } else {
+        // Iniciar grabación
         recognitionRef.current.start();
-        console.log("Grabación iniciada");
-        setIsListening(true);
-        if (onListening) onListening(true);
-      } catch (err) {
-        console.error("Error al iniciar grabación:", err);
-        setError("Error al iniciar grabación");
+        console.log("Grabación iniciada manualmente");
       }
+    } catch (err) {
+      console.error("Error al cambiar estado de grabación:", err);
+      setError("Error al cambiar estado de grabación");
+      setIsListening(false);
+      if (onListening) onListening(false);
     }
   }, [isListening, isSupported, onListening]);
 
