@@ -1,22 +1,39 @@
-# Asistente Personal
+# Maidex - Asistente Personal Inteligente
 
-Un asistente personal inteligente basado en Claude 3.5 Sonnet con integración de Model Context Protocol (MCP) para Gmail y Calendar.
+Un asistente personal inteligente basado en Claude 3.5 Sonnet con integración de Model Context Protocol (MCP) para Gmail, Calendar y Google Drive.
 
 ## Características
 
 - **Envío de correos electrónicos**: Integración directa con Gmail mediante MCP
 - **Creación de eventos**: Agenda eventos en Google Calendar con comandos en lenguaje natural
-- **Interfaz conversacional**: Chat intuitivo para interactuar con el asistente
+- **Gestión de archivos**: Listado, búsqueda y descarga de archivos de Google Drive
+- **Interfaz conversacional**: Chat intuitivo al estilo ChatGPT para interactuar con el asistente
+- **Interfaz optimizada para móvil**: Diseño adaptable para dispositivos de cualquier tamaño
+- **Entrada de voz**: Reconocimiento de voz integrado para dictar mensajes
 - **Persistencia de conversaciones**: Historial guardado entre sesiones
 - **Modo fallback**: Funcionamiento continuo incluso cuando Claude está sobrecargado
 - **Referencias contextuales**: Entiende frases como "envía otro correo al mismo destinatario"
 - **Despliegue en Vercel**: Listo para producción en la nube
 
+## Mejoras en la interfaz de usuario
+
+- **Diseño moderno**: Interfaz inspirada en ChatGPT con burbujas de chat, efectos de blur y animaciones fluidas
+- **ChatInput mejorado**: Campo de texto autoexpandible con botón de envío animado
+- **Acciones rápidas**: Chips de sugerencias para acciones comunes como "Enviar correo" o "Crear evento"
+- **Reconocimiento de voz**: Botón de micrófono con indicadores visuales de grabación activa
+- **Visualización de archivos**: Componente para mostrar archivos de Drive con iconos y opciones de descarga
+- **Tema claro/oscuro**: Soporte completo para modo oscuro y claro con transiciones suaves
+- **Responsive design**: Experiencia óptima tanto en escritorio como en dispositivos móviles
+
 ## Estructura del Proyecto
 
 ```
-asistente_personal/
+maidex/
 ├── components/        # Componentes de UI reutilizables
+│   ├── chat/          # Componentes relacionados con el chat (ChatInput, ChatBubble, etc.)
+│   ├── drive/         # Componentes para visualización de archivos de Drive
+│   ├── ui/            # Componentes de UI básicos (botones, inputs, etc.)
+│   └── layout/        # Componentes de estructura y navegación
 ├── hooks/             # Hooks personalizados de React
 ├── lib/               # Utilidades y helpers compartidos
 ├── mcp/               # Implementación de Model Context Protocol para Gmail y Calendar
@@ -32,15 +49,15 @@ asistente_personal/
 
 - Node.js v18+
 - API Key de Anthropic (Claude)
-- Proyecto OAuth de Google Cloud con acceso a Gmail y Calendar APIs
+- Proyecto OAuth de Google Cloud con acceso a Gmail, Calendar y Drive APIs
 - Cuenta de Vercel (para despliegue)
 
 ## Configuración Local
 
 1. Clonar el repositorio
    ```bash
-   git clone https://github.com/tu-usuario/asistente-personal.git
-   cd asistente-personal
+   git clone https://github.com/notcapi/maidex.git
+   cd maidex
    ```
 
 2. Instalar dependencias
@@ -119,6 +136,18 @@ asistente_personal/
 4. Comandos principales:
    - "Envía un correo a [correo] y dile [mensaje]"
    - "Crea un evento llamado [nombre] para mañana a las 10am"
+   - "Lista mis archivos de Drive"
+   - "Busca archivos PDF en mi Drive"
+
+## Tecnologías utilizadas
+
+- **Next.js**: Framework de React para aplicaciones web
+- **Tailwind CSS**: Utilidades CSS para diseño rápido y responsive
+- **Framer Motion**: Biblioteca para animaciones fluidas
+- **NextAuth.js**: Autenticación para aplicaciones Next.js
+- **TypeScript**: Tipado estático para desarrollo robusto
+- **Claude API**: Modelo de lenguaje de Anthropic
+- **Model Context Protocol**: Protocolo para integración segura con APIs
 
 ## Licencia
 

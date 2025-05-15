@@ -13,8 +13,6 @@ interface ChatInputProps {
   className?: string;
   maxRows?: number;
   disabled?: boolean;
-  suggestions?: string[];
-  onSuggestionClick?: (suggestion: string) => void;
 }
 
 export function ChatInput({
@@ -24,8 +22,6 @@ export function ChatInput({
   className,
   maxRows = 6,
   disabled = false,
-  suggestions = [],
-  onSuggestionClick,
 }: ChatInputProps) {
   const [value, setValue] = useState("");
   const [isFocused, setIsFocused] = useState(false);
@@ -67,38 +63,6 @@ export function ChatInput({
       "relative z-10 mt-auto",
       className
     )}>
-      {suggestions && suggestions.length > 0 && (
-        <div className="mb-3 px-1 flex flex-wrap gap-2">
-          <AnimatePresence>
-            {suggestions.map((suggestion, index) => (
-              <motion.div
-                key={suggestion}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 10 }}
-                transition={{ duration: 0.2, delay: index * 0.05 }}
-              >
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    if (onSuggestionClick) {
-                      onSuggestionClick(suggestion);
-                    } else {
-                      setValue(suggestion);
-                      textareaRef.current?.focus();
-                    }
-                  }}
-                  className="rounded-full text-xs bg-background/50 backdrop-blur-sm border border-border/30 hover:bg-background/80 transition-all shadow-sm"
-                >
-                  {suggestion}
-                </Button>
-              </motion.div>
-            ))}
-          </AnimatePresence>
-        </div>
-      )}
-      
       <MotionConfig>
         <div className="relative w-full flex flex-col">
           <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent pointer-events-none h-16 z-0" />

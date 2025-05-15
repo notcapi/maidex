@@ -114,13 +114,13 @@ export default function Chat() {
 
   // Ejemplos para el usuario
   const examples = [
-    { text: "Enviar correo", action: "send_email" },
-    { text: "Crear evento", action: "create_event" },
-    { text: "Listar archivos de Drive", action: "gdrive_operations" }
+    { text: "Enviar correo", action: "send_email", icon: "📧" },
+    { text: "Crear evento", action: "create_event", icon: "📅" },
+    { text: "Listar archivos de Drive", action: "gdrive_operations", icon: "📁" }
   ];
 
   const handleExampleClick = (text: string) => {
-    setInput(text);
+    handleSendMessage(text);
   };
 
   // Función para reiniciar la conversación
@@ -623,8 +623,6 @@ export default function Chat() {
                   disabled={status !== 'authenticated'}
                   placeholder={isListening ? "Escuchando..." : "Escribe un mensaje..."}
                   className="w-full"
-                  suggestions={examples.map(ex => ex.text)}
-                  onSuggestionClick={handleExampleClick}
                 />
               </div>
               <div className="ml-2 flex items-center">
@@ -632,6 +630,25 @@ export default function Chat() {
                   onTranscript={handleTranscript}
                   onListening={handleListening}
                 />
+              </div>
+            </div>
+            
+            {/* Desplegable de herramientas/acciones rápidas */}
+            <div className="w-full mt-2">
+              <div className="flex flex-wrap gap-1.5 justify-center">
+                {examples.map((example) => (
+                  <Button
+                    key={example.action}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleExampleClick(example.text)}
+                    className="text-xs py-1 px-2 h-auto rounded-full bg-background/50 backdrop-blur-sm border border-border/30 
+                              hover:bg-background/80 transition-all shadow-sm flex items-center"
+                  >
+                    <span className="mr-1">{example.icon}</span>
+                    {example.text}
+                  </Button>
+                ))}
               </div>
             </div>
           </div>

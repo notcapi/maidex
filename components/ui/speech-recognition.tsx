@@ -177,7 +177,7 @@ export function SpeechRecognition({
               size="icon" 
               type="button"
               disabled 
-              className="h-10 w-10 rounded-full bg-secondary/30 backdrop-blur-sm text-muted-foreground"
+              className="h-10 w-10 rounded-full bg-secondary/30 backdrop-blur-sm text-muted-foreground min-w-[40px] flex-shrink-0"
             >
               <MicIcon className="h-4 w-4 opacity-50" />
             </Button>
@@ -204,8 +204,8 @@ export function SpeechRecognition({
                 toggleListening();
               }}
               className={isListening 
-                ? "h-10 w-10 rounded-full bg-red-500 text-white hover:bg-red-600 border-none shadow-md" 
-                : "h-10 w-10 rounded-full bg-background/30 backdrop-blur-sm hover:bg-background/80 border-border/50 shadow-sm"}
+                ? "h-10 w-10 rounded-full bg-red-500 text-white hover:bg-red-600 border-none shadow-md min-w-[40px] flex-shrink-0" 
+                : "h-10 w-10 rounded-full bg-background/30 backdrop-blur-sm hover:bg-background/80 border-border/50 shadow-sm min-w-[40px] flex-shrink-0"}
             >
               <MicIcon className="h-4 w-4" />
             </Button>
