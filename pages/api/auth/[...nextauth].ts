@@ -77,8 +77,7 @@ export const authOptions: NextAuthOptions = {
           scope: 'openid email profile https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/calendar.events',
           // Forzar pantalla de consentimiento
           prompt: "consent",
-          // Especificar la URL de redirección
-          redirect_uri: `${baseUrl}/api/auth/callback/google`,
+          // No especificar la URL de redirección aquí, usar la configurada en Google Cloud
           // Acceso sin conexión para obtener refresh token
           access_type: 'offline'
         },
@@ -124,8 +123,8 @@ export const authOptions: NextAuthOptions = {
       console.log('Usuario cerró sesión:', message);
     },
   },
-  // Asegurarse de que las URLs usadas tengan el puerto correcto
-  useSecureCookies: false, // Para desarrollo local
+  // Configuración de seguridad
+  useSecureCookies: process.env.NODE_ENV === "production", // Solo usar cookies seguras en producción
   cookies: {
     sessionToken: {
       name: `next-auth.session-token`,
@@ -138,7 +137,7 @@ export const authOptions: NextAuthOptions = {
     },
   },
   secret: process.env.NEXTAUTH_SECRET || 'asistente_personal_secret_key_123',
-  debug: true, // Habilitar logs de depuración
+  debug: process.env.NODE_ENV !== "production", // Solo habilitar logs en desarrollo
 };
 
 export default NextAuth(authOptions); 
