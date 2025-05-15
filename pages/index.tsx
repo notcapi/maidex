@@ -16,17 +16,17 @@ import { Separator } from "@/components/ui/separator";
 export default function Home() {
   const { data: session } = useSession();
   const router = useRouter();
-  
+
   return (
     <div className="container mx-auto">
       <div className="max-w-5xl mx-auto space-y-8">
         <div className="text-center">
-          <h1 className="text-4xl font-bold mb-6">Asistente Personal</h1>
+          <h1 className="text-4xl font-bold mb-6">Maidex</h1>
           <p className="text-xl text-muted-foreground mb-8">
             Tu asistente inteligente para Gmail y Calendar con Claude 3.5 Sonnet
           </p>
         </div>
-        
+
         {session ? (
           <div className="space-y-6">
             <Card className="border shadow-md">

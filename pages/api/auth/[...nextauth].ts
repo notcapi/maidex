@@ -136,7 +136,7 @@ export const authOptions: NextAuthOptions = {
       },
     },
   },
-  secret: process.env.NEXTAUTH_SECRET || 'asistente_personal_secret_key_123',
+  secret: process.env.NEXTAUTH_SECRET || 'maidex_secret_key_123',
   debug: process.env.NODE_ENV !== "production", // Solo habilitar logs en desarrollo
 };
 

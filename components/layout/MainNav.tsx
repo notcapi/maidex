@@ -43,7 +43,7 @@ export function MainNav() {
     <div className="border-b bg-background">
       <div className="flex h-16 items-center px-4 max-w-7xl mx-auto">
         <div className="mr-6 flex items-center space-x-2">
-          <span className="font-bold text-xl text-foreground">Asistente Personal</span>
+          <span className="font-bold text-xl text-foreground">Maidex</span>
         </div>
         
         {/* Navegación para escritorio */}

@@ -10,5 +10,7 @@
     "NEXTAUTH_URL": "${VERCEL_URL}"
   },
   "buildCommand": "npm run build",
-  "installCommand": "npm install dotenv"
+  "installCommand": "npm install dotenv",
+  "framework": "nextjs",
+  "nodeVersion": "20.x"
 } 
