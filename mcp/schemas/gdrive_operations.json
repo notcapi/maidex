@@ -1,0 +1,144 @@
+{
+  "name": "gdrive_operations",
+  "description": "Realizar operaciones en Google Drive",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "operation": {
+        "type": "string",
+        "description": "Tipo de operación a realizar en Google Drive",
+        "enum": ["list", "search", "get", "create", "update", "delete"]
+      },
+      "fileId": {
+        "type": "string",
+        "description": "ID del archivo en Google Drive (para get, update, delete)"
+      },
+      "query": {
+        "type": "string",
+        "description": "Consulta para buscar archivos (para search)"
+      },
+      "folderId": {
+        "type": "string",
+        "description": "ID de la carpeta donde listar archivos o crear nuevos (opcional)"
+      },
+      "name": {
+        "type": "string",
+        "description": "Nombre del archivo a crear o actualizar"
+      },
+      "content": {
+        "type": "string",
+        "description": "Contenido del archivo a crear o actualizar (para archivos de texto)"
+      },
+      "mimeType": {
+        "type": "string",
+        "description": "Tipo MIME del archivo a crear",
+        "default": "text/plain"
+      },
+      "limit": {
+        "type": "integer",
+        "description": "Número máximo de archivos a listar",
+        "default": 10
+      }
+    },
+    "required": ["operation"],
+    "allOf": [
+      {
+        "if": {
+          "properties": { "operation": { "enum": ["get", "update", "delete"] } }
+        },
+        "then": {
+          "required": ["fileId"]
+        }
+      },
+      {
+        "if": {
+          "properties": { "operation": { "enum": ["search"] } }
+        },
+        "then": {
+          "required": ["query"]
+        }
+      },
+      {
+        "if": {
+          "properties": { "operation": { "enum": ["create", "update"] } }
+        },
+        "then": {
+          "required": ["name"]
+        }
+      }
+    ]
+  },
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "success": {
+        "type": "boolean",
+        "description": "Indica si la operación fue exitosa"
+      },
+      "data": {
+        "type": "object",
+        "description": "Datos resultantes de la operación"
+      },
+      "files": {
+        "type": "array",
+        "description": "Lista de archivos (para list y search)",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "ID del archivo"
+            },
+            "name": {
+              "type": "string",
+              "description": "Nombre del archivo"
+            },
+            "mimeType": {
+              "type": "string",
+              "description": "Tipo MIME del archivo"
+            },
+            "createdTime": {
+              "type": "string",
+              "description": "Fecha de creación"
+            },
+            "modifiedTime": {
+              "type": "string",
+              "description": "Fecha de última modificación"
+            },
+            "size": {
+              "type": "string",
+              "description": "Tamaño del archivo"
+            }
+          }
+        }
+      },
+      "file": {
+        "type": "object",
+        "description": "Información del archivo (para get, create, update)",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "ID del archivo"
+          },
+          "name": {
+            "type": "string",
+            "description": "Nombre del archivo"
+          },
+          "mimeType": {
+            "type": "string",
+            "description": "Tipo MIME del archivo"
+          },
+          "content": {
+            "type": "string",
+            "description": "Contenido del archivo (solo para archivos de texto)"
+          }
+        }
+      },
+      "error": {
+        "type": "string",
+        "description": "Mensaje de error en caso de fallo"
+      }
+    },
+    "required": ["success"]
+  }
+} 

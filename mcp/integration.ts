@@ -3,12 +3,14 @@ import Anthropic from '@anthropic-ai/sdk';
 import fs from 'fs';
 import { EmailAgent } from '../agents/emailAgent';
 import { CalendarAgent } from '../agents/calendarAgent';
+import { DriveAgent } from '../agents/driveAgent';
 
 export class MCPIntegration {
   private anthropic: Anthropic;
   private mcpBasePath: string;
   private emailAgent: EmailAgent;
   private calendarAgent: CalendarAgent;
+  private driveAgent: DriveAgent;
 
   constructor() {
     this.anthropic = new Anthropic({
@@ -17,6 +19,7 @@ export class MCPIntegration {
     this.mcpBasePath = process.env.MCP_BASE_PATH || './mcp';
     this.emailAgent = new EmailAgent();
     this.calendarAgent = new CalendarAgent();
+    this.driveAgent = new DriveAgent();
   }
 
   /**
@@ -85,6 +88,12 @@ export class MCPIntegration {
             input_schema: this.getToolSchema('calendar_event.json', 'input_schema'),
             description: 'Crea un evento en Google Calendar'
           };
+        } else if (capability === 'gdrive_operations') {
+          return {
+            name: 'gdrive_operations',
+            input_schema: this.getToolSchema('gdrive_operations.json', 'input_schema'),
+            description: 'Realizar operaciones en Google Drive'
+          };
         }
         return null;
       }).filter(Boolean);
@@ -96,7 +105,7 @@ export class MCPIntegration {
       
       // Mensaje del sistema específico para forzar el uso de herramientas
       let systemMessage = hasTools 
-        ? 'Eres un asistente personal eficiente. DEBES USAR LAS HERRAMIENTAS proporcionadas en lugar de responder con texto cuando el usuario pide una acción específica. Cuando el usuario pide enviar un correo, SIEMPRE usa la herramienta send_email y NO respondas con texto. Cuando pide crear un evento, SIEMPRE usa la herramienta create_event. No expliques que vas a usar una herramienta, simplemente úsala.'
+        ? 'Eres un asistente personal eficiente. DEBES USAR LAS HERRAMIENTAS proporcionadas en lugar de responder con texto cuando el usuario pide una acción específica. Cuando el usuario pide enviar un correo, SIEMPRE usa la herramienta send_email. Cuando pide crear un evento, SIEMPRE usa la herramienta create_event. Cuando pide algo relacionado con archivos en Google Drive, SIEMPRE usa la herramienta gdrive_operations. No expliques que vas a usar una herramienta, simplemente úsala.'
         : 'Eres un asistente personal eficiente. Responde de forma concisa y clara a las preguntas del usuario.';
       
       // Modificar el prompt para hacerlo más directo si hay una herramienta disponible
@@ -142,6 +151,17 @@ export class MCPIntegration {
           // Hacer lo mismo para eventos si es necesario
           modifiedPrompt = `Usa la herramienta create_event para ${prompt}`;
         }
+        else if (capabilities.includes('gdrive_operations') && 
+                (prompt.toLowerCase().includes('drive') || 
+                 prompt.toLowerCase().includes('archivo') || 
+                 prompt.toLowerCase().includes('documento') ||
+                 prompt.toLowerCase().includes('carpeta') ||
+                 prompt.toLowerCase().includes('busca') ||
+                 prompt.toLowerCase().includes('crear archivo'))) {
+          
+          // Modificar el prompt para Google Drive
+          modifiedPrompt = `Usa la herramienta gdrive_operations para ${prompt}`;
+        }
       }
       
       console.log('Enviando prompt a Claude (modificado):', modifiedPrompt);
@@ -186,6 +206,9 @@ export class MCPIntegration {
           console.log('Resultado de envío de correo:', result);
         } else if (name === 'create_event') {
           result = await this.calendarAgent.createEvent(accessToken, input as any);
+        } else if (name === 'gdrive_operations') {
+          result = await this.driveAgent.handleDriveOperation(accessToken, input as any);
+          console.log('Resultado de operación en Drive:', result);
         }
         
         console.log('Resultado de la acción:', JSON.stringify(result, null, 2));
@@ -237,6 +260,8 @@ export class MCPIntegration {
           explicitPrompt = 'IMPORTANTE: UTILIZA LA HERRAMIENTA send_email PARA REALIZAR ESTA TAREA. NO RESPONDAS CON TEXTO. ' + modifiedPrompt;
         } else if (capabilities.includes('create_event')) {
           explicitPrompt = 'IMPORTANTE: UTILIZA LA HERRAMIENTA create_event PARA REALIZAR ESTA TAREA. NO RESPONDAS CON TEXTO. ' + modifiedPrompt;
+        } else if (capabilities.includes('gdrive_operations')) {
+          explicitPrompt = 'IMPORTANTE: UTILIZA LA HERRAMIENTA gdrive_operations PARA REALIZAR ESTA TAREA. NO RESPONDAS CON TEXTO. ' + modifiedPrompt;
         }
         
         if (explicitPrompt) {
@@ -273,6 +298,8 @@ export class MCPIntegration {
               result = await this.emailAgent.sendEmail(accessToken, emailParams);
             } else if (name === 'create_event') {
               result = await this.calendarAgent.createEvent(accessToken, input as any);
+            } else if (name === 'gdrive_operations') {
+              result = await this.driveAgent.handleDriveOperation(accessToken, input as any);
             }
             
             if (result && result.success) {

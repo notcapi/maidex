@@ -14,7 +14,7 @@ type Message = {
   content: string;
   isUser: boolean;
   timestamp: Date;
-  action?: 'send_email' | 'create_event';
+  action?: 'send_email' | 'create_event' | 'gdrive_operations';
 };
 
 export default function Chat() {
@@ -56,26 +56,43 @@ export default function Chat() {
   const detectAction = (text: string): string | null => {
     const lowerText = text.toLowerCase();
     
-    // Detectar si es un correo electrónico
+    // Detección de acciones de email
     if (
-      lowerText.includes('correo') || 
-      lowerText.includes('email') || 
       lowerText.includes('envía') || 
-      lowerText.includes('mandar')
+      lowerText.includes('enviar') || 
+      lowerText.includes('mandar') || 
+      lowerText.includes('email') || 
+      lowerText.includes('correo')
     ) {
       return 'send_email';
     }
     
-    // Detectar si es un evento de calendario
+    // Detección de acciones de calendario
     if (
-      lowerText.includes('evento') || 
-      lowerText.includes('calendario') || 
-      lowerText.includes('cita') || 
-      lowerText.includes('reunión') ||
-      (lowerText.includes('crear') && 
-        (lowerText.includes('programar') || lowerText.includes('agendar')))
+      lowerText.includes('crear evento') || 
+      lowerText.includes('crea evento') || 
+      lowerText.includes('agenda') || 
+      lowerText.includes('programa') || 
+      lowerText.includes('añadir evento') || 
+      lowerText.includes('añade evento') || 
+      lowerText.includes('reunión')
     ) {
       return 'create_event';
+    }
+    
+    // Detección de acciones de Google Drive
+    if (
+      lowerText.includes('drive') || 
+      lowerText.includes('documento') || 
+      lowerText.includes('archivo') || 
+      lowerText.includes('crear archivo') ||
+      lowerText.includes('crea archivo') ||
+      lowerText.includes('lista archivos') ||
+      lowerText.includes('busca archivo') ||
+      lowerText.includes('actualiza archivo') ||
+      lowerText.includes('elimina archivo')
+    ) {
+      return 'gdrive_operations';
     }
     
     return null;
@@ -97,7 +114,7 @@ export default function Chat() {
       content: input,
       isUser: true,
       timestamp: new Date(),
-      action: action as 'send_email' | 'create_event' | undefined
+      action: action as 'send_email' | 'create_event' | 'gdrive_operations' | undefined
     };
     
     setMessages(prevMessages => [...prevMessages, userMessage]);
@@ -109,7 +126,7 @@ export default function Chat() {
       if (action) {
         // Mostrar un mensaje de estado mientras se procesa
         toast({
-          title: action === 'send_email' ? "Enviando correo..." : "Creando evento...",
+          title: action === 'send_email' ? "Enviando correo..." : action === 'create_event' ? "Creando evento..." : "Gestionando archivo...",
           description: "Por favor, espera un momento",
         });
         
@@ -138,6 +155,12 @@ export default function Chat() {
             toast({
               title: "Evento creado",
               description: `${result.params.summary} - ${startTime}`,
+            });
+          } else if (action === 'gdrive_operations') {
+            responseMessage = `He gestionado el archivo "${result.params.name}".`;
+            toast({
+              title: "Archivo gestionado",
+              description: `${result.params.name}`,
             });
           }
 
@@ -236,7 +259,8 @@ export default function Chat() {
   // Ejemplos para el usuario
   const examples = [
     { text: "Enviar correo", action: "send_email" },
-    { text: "Crear evento", action: "create_event" }
+    { text: "Crear evento", action: "create_event" },
+    { text: "Listar archivos de Drive", action: "gdrive_operations" }
   ];
 
   const handleExampleClick = (text: string) => {
@@ -320,7 +344,7 @@ export default function Chat() {
           <div>
             <CardTitle>Asistente Personal</CardTitle>
             <CardDescription className="text-primary-foreground/80">
-              Puedo enviar correos y crear eventos en tu calendario
+              Puedo enviar correos, crear eventos en tu calendario y gestionar tus archivos en Google Drive
             </CardDescription>
           </div>
           <Button 
@@ -361,7 +385,9 @@ export default function Chat() {
                   {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   {message.action && (
                     <span className="ml-2 bg-background text-foreground px-2 py-0.5 rounded-full text-xs">
-                      {message.action === 'send_email' ? '📧 Email' : '📅 Evento'}
+                      {message.action === 'send_email' ? '📧 Email' : 
+                       message.action === 'create_event' ? '📅 Evento' : 
+                       '📄 Drive'}
                     </span>
                   )}
                 </div>
@@ -444,7 +470,9 @@ export default function Chat() {
                   onClick={() => handleExampleClick(example.text)}
                   className="text-xs"
                 >
-                  {example.action === 'send_email' ? '📧' : '📅'} {example.text}
+                  {example.action === 'send_email' ? '📧' : 
+                   example.action === 'create_event' ? '📅' : 
+                   '📄'} {example.text}
                 </Button>
               ))}
             </div>

@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from './auth/[...nextauth]';
 import { MCPServerManager } from '../../mcp/serverESM.mjs';
 import { getConversation, getLastEmailRecipient } from '@/lib/conversation-store';
+import { DriveAgent } from '@/agents/driveAgent';
 
 // Crear instancia global del servidor MCP para reutilizarla entre solicitudes
 let mcpServer: any = null;
@@ -48,6 +49,39 @@ export default async function handler(
       });
     }
 
+    // Si es una acción de Google Drive, manejarla directamente aquí
+    if (action === 'gdrive_operations') {
+      try {
+        // Extraer las operaciones solicitadas del texto usando heurísticas simples
+        const operation = extractDriveOperation(text);
+        
+        if (!operation) {
+          return res.status(400).json({
+            success: false,
+            error: 'No se pudo determinar la operación de Google Drive a realizar'
+          });
+        }
+        
+        // Ejecutar la operación usando el agente de Drive
+        const driveAgent = new DriveAgent();
+        const result = await driveAgent.handleDriveOperation(accessToken, operation);
+        
+        return res.status(result.success ? 200 : 400).json({
+          success: result.success,
+          result: result,
+          params: operation
+        });
+      } catch (driveError: any) {
+        console.error('Error al procesar operación de Drive:', driveError);
+        return res.status(500).json({
+          success: false,
+          error: driveError.message || 'Error al procesar operación de Google Drive',
+          errorCode: 'DRIVE_OPERATION_FAILED'
+        });
+      }
+    }
+
+    // Para otras acciones, continuar con el flujo normal de MCP
     // Inicializar el servidor MCP si aún no existe
     if (!mcpServer) {
       console.log("Inicializando servidor MCP...");
@@ -235,4 +269,103 @@ export default async function handler(
       errorCode: error.code || 'UNKNOWN_ERROR'
     });
   }
+}
+
+/**
+ * Extrae la operación de Google Drive solicitada a partir del texto
+ */
+function extractDriveOperation(text: string): any {
+  const lowerText = text.toLowerCase();
+  
+  // Lista de archivos
+  if (lowerText.includes('lista') && (lowerText.includes('archivos') || lowerText.includes('documentos'))) {
+    // Buscar una carpeta específica
+    const folderMatch = text.match(/en (?:la )?carpeta ['"]?([\w\s]+)['"]?/i);
+    const folderId = folderMatch ? folderMatch[1] : undefined;
+    
+    // Buscar un límite
+    const limitMatch = text.match(/(?:muestra|lista|ver) (\d+) (?:archivos|documentos)/i);
+    const limit = limitMatch ? parseInt(limitMatch[1]) : 10;
+    
+    return {
+      operation: 'list',
+      folderId: folderId,
+      limit: limit
+    };
+  }
+  
+  // Búsqueda de archivos
+  if (lowerText.includes('busca') || lowerText.includes('encuentra')) {
+    const queryMatch = text.match(/(?:busca|encuentra|buscar) (?:archivos?|documentos?)(?:\s+que contengan|\s+con|\s+llamados?)?(?:\s+['"]?)([a-zA-Z0-9\s]+)(?:['"]?)/i);
+    
+    if (queryMatch) {
+      return {
+        operation: 'search',
+        query: queryMatch[1].trim()
+      };
+    }
+  }
+  
+  // Crear un archivo
+  if (lowerText.includes('crea') || lowerText.includes('nuevo')) {
+    const nameMatch = text.match(/(?:crear|crea|nuevo) (?:un )?(?:archivo|documento)(?: llamado| con nombre| nombrado)? ['"]?([a-zA-Z0-9\s._-]+)['"]?/i);
+    const contentMatch = text.match(/con (?:el )?(?:contenido|texto|datos)?:?\s+['"]?([\s\S]+?)['"]?(?:\s*$|(?=\s+con\s+))/i);
+    
+    if (nameMatch) {
+      return {
+        operation: 'create',
+        name: nameMatch[1].trim(),
+        content: contentMatch ? contentMatch[1].trim() : "Contenido del nuevo archivo",
+        mimeType: lowerText.includes('html') ? 'text/html' : 'text/plain'
+      };
+    }
+  }
+  
+  // Obtener un archivo por ID
+  const fileIdMatch = text.match(/(?:obtén|obtener|muestra|mostrar|abre|abrir) (?:el )?(?:archivo|documento) (?:con id|con identificador|id)? ['"]?([a-zA-Z0-9_-]+)['"]?/i);
+  if (fileIdMatch) {
+    return {
+      operation: 'get',
+      fileId: fileIdMatch[1].trim()
+    };
+  }
+  
+  // Actualizar un archivo
+  if (lowerText.includes('actualiza') || lowerText.includes('modifica') || lowerText.includes('edita')) {
+    const updateIdMatch = text.match(/(?:actualiza|actualizar|modifica|modificar|edita|editar) (?:el )?(?:archivo|documento) (?:con id|con identificador|id)? ['"]?([a-zA-Z0-9_-]+)['"]?/i);
+    const updateNameMatch = text.match(/(?:cambia|cambiar) (?:el )?nombre a ['"]?([a-zA-Z0-9\s._-]+)['"]?/i);
+    const updateContentMatch = text.match(/(?:con|usando) (?:el )?(?:contenido|texto|datos)?:?\s+['"]?([\s\S]+?)['"]?(?:\s*$|(?=\s+con\s+))/i);
+    
+    if (updateIdMatch) {
+      const updateOperation: any = {
+        operation: 'update',
+        fileId: updateIdMatch[1].trim()
+      };
+      
+      if (updateNameMatch) {
+        updateOperation.name = updateNameMatch[1].trim();
+      }
+      
+      if (updateContentMatch) {
+        updateOperation.content = updateContentMatch[1].trim();
+      }
+      
+      return updateOperation;
+    }
+  }
+  
+  // Eliminar un archivo
+  if (lowerText.includes('elimina') || lowerText.includes('borra')) {
+    const deleteIdMatch = text.match(/(?:elimina|eliminar|borra|borrar) (?:el )?(?:archivo|documento) (?:con id|con identificador|id)? ['"]?([a-zA-Z0-9_-]+)['"]?/i);
+    
+    if (deleteIdMatch) {
+      return {
+        operation: 'delete',
+        fileId: deleteIdMatch[1].trim()
+      };
+    }
+  }
+  
+  // Si no se puede determinar la operación, devolver null
+  return null;
 } 

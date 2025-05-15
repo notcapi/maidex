@@ -74,7 +74,7 @@ export const authOptions: NextAuthOptions = {
       authorization: {
         params: {
           // Incluir todos los scopes necesarios para Gmail y Calendar
-          scope: 'openid email profile https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/calendar.events',
+          scope: 'openid email profile https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/drive.file',
           // Forzar pantalla de consentimiento
           prompt: "consent",
           // No especificar la URL de redirección aquí, usar la configurada en Google Cloud
@@ -99,7 +99,7 @@ export const authOptions: NextAuthOptions = {
 
       // Si el token no ha expirado, devuélvelo
       if (token.expiresAt && Date.now() < token.expiresAt * 1000) {
-        return token;
+      return token;
       }
 
       // Si el token ha expirado, intenta refrescarlo
