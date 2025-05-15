@@ -88,17 +88,15 @@ export function SpeechRecognition({
           recognition.onend = () => {
             console.log("Reconocimiento finalizado");
             
-            // Si fue detenido manualmente, enviar la transcripción
-            if (isListening) {
-              if (accumulatedTranscriptRef.current.trim()) {
-                onTranscript(accumulatedTranscriptRef.current.trim());
-                console.log("Transcripción enviada:", accumulatedTranscriptRef.current.trim());
-              }
-              
-              // Actualizar estado
-              setIsListening(false);
-              if (onListening) onListening(false);
+            // Si se detuvo manualmente, enviar la transcripción
+            if (accumulatedTranscriptRef.current.trim()) {
+              onTranscript(accumulatedTranscriptRef.current.trim());
+              console.log("Transcripción enviada:", accumulatedTranscriptRef.current.trim());
             }
+            
+            // Actualizar estado (siempre)
+            setIsListening(false);
+            if (onListening) onListening(false);
           };
 
           recognition.onerror = (event: any) => {
@@ -119,13 +117,15 @@ export function SpeechRecognition({
       // Limpiar al desmontar
       if (recognitionRef.current) {
         try {
-          recognitionRef.current.abort();
+          if (isListening) {
+            recognitionRef.current.stop();
+          }
         } catch (e) {
           console.error("Error al abortar reconocimiento:", e);
         }
       }
     };
-  }, [onListening, onTranscript]);
+  }, [onListening, onTranscript, isListening]);
 
   // Manejar inicio/parada manual
   const toggleListening = useCallback(() => {
@@ -135,21 +135,26 @@ export function SpeechRecognition({
     }
     
     setError(null);
-    console.log("Cambiando estado de escucha:", !isListening);
+    console.log("Cambiando estado de escucha actual:", isListening);
     
     try {
       if (isListening) {
         // Detener grabación
+        console.log("Intentando detener grabación...");
         recognitionRef.current.stop();
         console.log("Grabación detenida manualmente");
+        // No cambiamos el estado aquí, lo hacemos en el evento onend
       } else {
         // Iniciar grabación
+        console.log("Intentando iniciar grabación...");
         recognitionRef.current.start();
         console.log("Grabación iniciada manualmente");
+        // El estado se actualizará en el evento onstart
       }
     } catch (err) {
       console.error("Error al cambiar estado de grabación:", err);
       setError("Error al cambiar estado de grabación");
+      // Sincronizamos el estado en caso de error
       setIsListening(false);
       if (onListening) onListening(false);
     }
