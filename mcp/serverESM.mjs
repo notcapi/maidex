@@ -2,9 +2,15 @@
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 
-// Cargar dotenv con CommonJS require
-const dotenv = require('dotenv');
-dotenv.config({ path: '.env.local' });
+// Cargar dotenv con CommonJS require (con manejo de errores)
+try {
+  const dotenv = require('dotenv');
+  dotenv.config({ path: '.env.local' });
+  console.log("dotenv cargado correctamente");
+} catch (error) {
+  console.warn("No se pudo cargar dotenv, continuando sin él:", error.message);
+  // En Vercel, las variables de entorno ya están disponibles sin dotenv
+}
 
 // Importaciones ESM
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
