@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 
 interface SpeechRecognitionProps {
@@ -17,9 +17,14 @@ export function SpeechRecognition({
   const [isListening, setIsListening] = useState(false);
   const [isSupported, setIsSupported] = useState(true);
   const [transcript, setTranscript] = useState("");
+  const [error, setError] = useState<string | null>(null);
   
   // Referencia al objeto de reconocimiento de voz
-  const recognitionRef = React.useRef<any>(null);
+  const recognitionRef = useRef<any>(null);
+  // Temporizador para detección de silencio
+  const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  // Acumulador de transcripción
+  const accumulatedTranscriptRef = useRef("");
 
   useEffect(() => {
     // Verificar si el navegador soporta la API
@@ -29,69 +34,133 @@ export function SpeechRecognition({
       
       if (!SpeechRecognition) {
         setIsSupported(false);
+        setError("Tu navegador no soporta reconocimiento de voz");
         return;
       }
 
       // Crear instancia de reconocimiento de voz
       const recognition = new SpeechRecognition();
-      recognition.continuous = false;
+      recognition.continuous = true; // Modo continuo
       recognition.interimResults = true;
       recognition.lang = 'es-ES'; // Configurar para español
+      recognition.maxAlternatives = 1;
 
       // Guardar referencia
       recognitionRef.current = recognition;
 
       // Configurar eventos
       recognition.onresult = (event: any) => {
+        // Reiniciar el temporizador de silencio cada vez que hay un resultado
+        if (silenceTimerRef.current) {
+          clearTimeout(silenceTimerRef.current);
+        }
+        
         const current = event.resultIndex;
         const currentTranscript = event.results[current][0].transcript;
-        setTranscript(currentTranscript);
+        console.log("Transcripción en curso:", currentTranscript);
+        
+        // Acumular transcripción para resultados intermedios
+        if (event.results[current].isFinal) {
+          accumulatedTranscriptRef.current += " " + currentTranscript;
+          accumulatedTranscriptRef.current = accumulatedTranscriptRef.current.trim();
+        }
+        
+        // Mostrar transcripción en curso
+        setTranscript(
+          accumulatedTranscriptRef.current + " " + 
+          (event.results[current].isFinal ? "" : currentTranscript)
+        );
+        
+        // Configurar temporizador de silencio (3 segundos sin hablar)
+        silenceTimerRef.current = setTimeout(() => {
+          if (isListening && recognitionRef.current) {
+            console.log("Silencio detectado, deteniendo grabación");
+            recognitionRef.current.stop();
+          }
+        }, 3000);
       };
 
       recognition.onend = () => {
+        console.log("Reconocimiento finalizado");
+        // Limpiar temporizador
+        if (silenceTimerRef.current) {
+          clearTimeout(silenceTimerRef.current);
+          silenceTimerRef.current = null;
+        }
+        
         setIsListening(false);
         if (onListening) onListening(false);
         
-        // Si hay texto, enviarlo al componente padre
-        if (transcript) {
-          onTranscript(transcript);
+        // Si hay texto acumulado, enviarlo al componente padre
+        if (accumulatedTranscriptRef.current) {
+          onTranscript(accumulatedTranscriptRef.current);
           setTranscript("");
+          accumulatedTranscriptRef.current = "";
         }
       };
 
       recognition.onerror = (event: any) => {
         console.error('Error en reconocimiento de voz:', event.error);
+        setError(`Error: ${event.error}`);
         setIsListening(false);
         if (onListening) onListening(false);
+        
+        // Limpiar temporizador
+        if (silenceTimerRef.current) {
+          clearTimeout(silenceTimerRef.current);
+          silenceTimerRef.current = null;
+        }
+      };
+      
+      // Evento para reintentar si hay una desconexión
+      recognition.onnomatch = () => {
+        console.log("No se ha encontrado coincidencia");
       };
     }
 
     return () => {
       // Limpiar al desmontar
       if (recognitionRef.current) {
-        recognitionRef.current.abort();
+        try {
+          recognitionRef.current.abort();
+        } catch (e) {
+          console.error("Error al abortar reconocimiento:", e);
+        }
+      }
+      
+      // Limpiar temporizador
+      if (silenceTimerRef.current) {
+        clearTimeout(silenceTimerRef.current);
+        silenceTimerRef.current = null;
       }
     };
   }, [onTranscript, onListening]);
 
-  // Actualizar el callback cuando cambia el transcript
-  useEffect(() => {
-    if (transcript && !isListening) {
-      onTranscript(transcript);
-      setTranscript("");
-    }
-  }, [transcript, isListening, onTranscript]);
-
   const toggleListening = useCallback(() => {
     if (!isSupported || !recognitionRef.current) return;
+    
+    setError(null);
 
     if (isListening) {
+      // Detener manualmente la grabación
+      if (silenceTimerRef.current) {
+        clearTimeout(silenceTimerRef.current);
+        silenceTimerRef.current = null;
+      }
       recognitionRef.current.stop();
     } else {
+      // Iniciar grabación
+      accumulatedTranscriptRef.current = "";
       setTranscript("");
-      recognitionRef.current.start();
-      setIsListening(true);
-      if (onListening) onListening(true);
+      try {
+        recognitionRef.current.start();
+        console.log("Grabación iniciada");
+        setIsListening(true);
+        if (onListening) onListening(true);
+      } catch (err) {
+        console.error("Error al iniciar grabación:", err);
+        setError("Error al iniciar grabación");
+      }
     }
   }, [isListening, isSupported, onListening]);
 
