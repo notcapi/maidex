@@ -1,0 +1,37 @@
+[
+  {
+    "role": "system",
+    "content": "Eres un asistente personal que ayuda con correos y eventos de calendario usando Google. Puedes enviar correos, crear eventos, y buscar información en Gmail y Google Calendar.",
+    "timestamp": 1747324696084
+  },
+  {
+    "role": "user",
+    "content": "ahora uno que diga adios",
+    "timestamp": 1747324696084
+  },
+  {
+    "role": "assistant",
+    "content": "Entendido. Aquí tienes un mensaje de correo electrónico que dice adiós:\n\nAsunto: Adiós\n\nCuerpo del correo:\nAdiós.\n\n¿Te gustaría que enviara este correo electrónico? Si es así, necesitaría algunos detalles adicionales como la dirección de correo electrónico del destinatario. También puedo modificar el mensaje si lo deseas antes de enviarlo.",
+    "timestamp": 1747324699374
+  },
+  {
+    "role": "user",
+    "content": "y ahora otro que diga adios",
+    "timestamp": 1747325543020
+  },
+  {
+    "role": "assistant",
+    "content": "Claro, puedo ayudarte a crear otro correo electrónico que diga adiós. Aquí tienes una versión ligeramente diferente:\n\nAsunto: Un cordial adiós\n\nCuerpo del correo:\nAdiós.\n\nSaludos,\n[Tu nombre]\n\nEste es un poco más formal con un asunto y una firma. ¿Te gustaría enviarlo así o prefieres hacer algún cambio? Si deseas enviarlo, necesitaría la dirección de correo electrónico del destinatario. También puedo modificar el contenido según tus preferencias.",
+    "timestamp": 1747325546237
+  },
+  {
+    "role": "user",
+    "content": "envia otro que ponga adios",
+    "timestamp": 1747331540629
+  },
+  {
+    "role": "assistant",
+    "content": "Entendido. Prepararé un nuevo correo electrónico que diga \"adiós\" y lo enviaré. Sin embargo, para poder enviar el correo, necesito algunos detalles importantes:\n\n1. La dirección de correo electrónico del destinatario.\n2. Si deseas incluir algún asunto específico.\n3. Si quieres añadir algo más al cuerpo del mensaje además de \"adiós\".\n\nPor defecto, el correo se verá así:\n\nPara: [Dirección del destinatario]\nAsunto: Adiós\nCuerpo: Adiós\n\n¿Podrías proporcionarme la dirección de correo electrónico del destinatario y confirmar si quieres enviar el correo tal cual o hacer algún cambio?",
+    "timestamp": 1747331544224
+  }
+]

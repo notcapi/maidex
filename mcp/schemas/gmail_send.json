@@ -1,0 +1,80 @@
+{
+  "name": "send_email",
+  "description": "Envía un correo electrónico utilizando Gmail",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "to": {
+        "oneOf": [
+          {
+            "type": "array",
+            "description": "Lista de destinatarios del correo",
+            "items": {
+              "type": "string",
+              "format": "email"
+            }
+          },
+          {
+            "type": "string",
+            "description": "Destinatario del correo (único o múltiples separados por coma)",
+            "format": "email"
+          }
+        ],
+        "description": "Destinatarios del correo (puede ser un string único o un array)"
+      },
+      "subject": {
+        "type": "string",
+        "description": "Asunto del correo"
+      },
+      "body": {
+        "type": "string",
+        "description": "Cuerpo del correo (puede ser texto plano o HTML)"
+      },
+      "cc": {
+        "type": "array",
+        "description": "Lista de destinatarios en copia",
+        "items": {
+          "type": "string",
+          "format": "email"
+        }
+      },
+      "bcc": {
+        "type": "array",
+        "description": "Lista de destinatarios en copia oculta",
+        "items": {
+          "type": "string",
+          "format": "email"
+        }
+      },
+      "mimeType": {
+        "type": "string",
+        "description": "Tipo MIME del correo",
+        "enum": ["text/plain", "text/html", "multipart/alternative"],
+        "default": "text/plain"
+      },
+      "htmlBody": {
+        "type": "string",
+        "description": "Versión HTML del cuerpo del correo (solo si mimeType es multipart/alternative)"
+      }
+    },
+    "required": ["to", "subject", "body"]
+  },
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "success": {
+        "type": "boolean",
+        "description": "Indica si el correo se envió correctamente"
+      },
+      "messageId": {
+        "type": "string",
+        "description": "ID del mensaje enviado"
+      },
+      "error": {
+        "type": "string",
+        "description": "Mensaje de error en caso de fallo"
+      }
+    },
+    "required": ["success"]
+  }
+} 

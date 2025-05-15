@@ -1,0 +1,15 @@
+{
+  "schema_version": "v1",
+  "capabilities": [
+    {
+      "type": "browser",
+      "browsers": ["chromium"],
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "headless": false,
+      "record_video": false
+    }
+  ]
+} 

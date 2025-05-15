@@ -1,0 +1,107 @@
+{
+  "name": "create_event",
+  "description": "Crea un evento en Google Calendar",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "summary": {
+        "type": "string",
+        "description": "Título del evento"
+      },
+      "description": {
+        "type": "string",
+        "description": "Descripción detallada del evento"
+      },
+      "location": {
+        "type": "string",
+        "description": "Ubicación del evento"
+      },
+      "start": {
+        "type": "string",
+        "format": "date-time",
+        "description": "Fecha y hora de inicio del evento (formato ISO 8601)"
+      },
+      "end": {
+        "type": "string",
+        "format": "date-time",
+        "description": "Fecha y hora de finalización del evento (formato ISO 8601)"
+      },
+      "attendees": {
+        "type": "array",
+        "description": "Lista de participantes",
+        "items": {
+          "type": "object",
+          "properties": {
+            "email": {
+              "type": "string",
+              "format": "email",
+              "description": "Correo electrónico del participante"
+            },
+            "optional": {
+              "type": "boolean",
+              "description": "Indica si la asistencia es opcional"
+            }
+          },
+          "required": ["email"]
+        }
+      },
+      "reminders": {
+        "type": "object",
+        "description": "Configuración de recordatorios",
+        "properties": {
+          "useDefault": {
+            "type": "boolean",
+            "description": "Usar recordatorios predeterminados"
+          },
+          "overrides": {
+            "type": "array",
+            "description": "Recordatorios personalizados",
+            "items": {
+              "type": "object",
+              "properties": {
+                "method": {
+                  "type": "string",
+                  "enum": ["email", "popup"],
+                  "description": "Método de notificación"
+                },
+                "minutes": {
+                  "type": "integer",
+                  "description": "Minutos antes del evento para la notificación"
+                }
+              },
+              "required": ["method", "minutes"]
+            }
+          }
+        }
+      },
+      "calendarId": {
+        "type": "string",
+        "description": "ID del calendario donde crear el evento (por defecto, 'primary')",
+        "default": "primary"
+      }
+    },
+    "required": ["summary", "start", "end"]
+  },
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "success": {
+        "type": "boolean",
+        "description": "Indica si el evento se creó correctamente"
+      },
+      "eventId": {
+        "type": "string",
+        "description": "ID del evento creado"
+      },
+      "htmlLink": {
+        "type": "string",
+        "description": "Enlace para ver el evento en Google Calendar"
+      },
+      "error": {
+        "type": "string",
+        "description": "Mensaje de error en caso de fallo"
+      }
+    },
+    "required": ["success"]
+  }
+} 
