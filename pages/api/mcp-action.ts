@@ -277,8 +277,22 @@ export default async function handler(
 function extractDriveOperation(text: string): any {
   const lowerText = text.toLowerCase();
   
-  // Lista de archivos
-  if (lowerText.includes('lista') && (lowerText.includes('archivos') || lowerText.includes('documentos'))) {
+  // Lista de archivos - patrones mejorados
+  if ((lowerText.includes('lista') || 
+       lowerText.includes('dime') || 
+       lowerText.includes('muestra') || 
+       lowerText.includes('ver') || 
+       lowerText.includes('dame') || 
+       lowerText.includes('mostrar') || 
+       lowerText.includes('que archivos tengo') || 
+       lowerText.includes('cuáles son mis archivos') || 
+       lowerText.includes('mis archivos') || 
+       lowerText.includes('mis documentos')) && 
+      (lowerText.includes('archivos') || 
+       lowerText.includes('documentos') || 
+       lowerText.includes('drive') || 
+       lowerText.includes('google drive'))) {
+    
     // Buscar una carpeta específica
     const folderMatch = text.match(/en (?:la )?carpeta ['"]?([\w\s]+)['"]?/i);
     const folderId = folderMatch ? folderMatch[1] : undefined;

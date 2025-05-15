@@ -157,11 +157,54 @@ export default function Chat() {
               description: `${result.params.summary} - ${startTime}`,
             });
           } else if (action === 'gdrive_operations') {
-            responseMessage = `He gestionado el archivo "${result.params.name}".`;
-            toast({
-              title: "Archivo gestionado",
-              description: `${result.params.name}`,
-            });
+            // Mejorar el manejo de respuestas de Google Drive según la operación
+            if (result.params.operation === 'list') {
+              const fileCount = result.result.files?.length || 0;
+              const fileList = result.result.files?.map((file: any) => `- ${file.name}`).join('\n');
+              responseMessage = `He encontrado ${fileCount} archivos en tu Google Drive:\n\n${fileList}`;
+              toast({
+                title: "Archivos listados",
+                description: `${fileCount} archivos encontrados`,
+              });
+            } else if (result.params.operation === 'search') {
+              const fileCount = result.result.files?.length || 0;
+              const fileList = result.result.files?.map((file: any) => `- ${file.name}`).join('\n');
+              responseMessage = `He encontrado ${fileCount} archivos que coinciden con tu búsqueda:\n\n${fileList}`;
+              toast({
+                title: "Búsqueda completada",
+                description: `${fileCount} archivos encontrados`,
+              });
+            } else if (result.params.operation === 'get') {
+              responseMessage = `He recuperado el archivo "${result.result.file?.name || 'solicitado'}"`;
+              toast({
+                title: "Archivo recuperado",
+                description: result.result.file?.name || "Archivo",
+              });
+            } else if (result.params.operation === 'create') {
+              responseMessage = `He creado el archivo "${result.params.name}"`;
+              toast({
+                title: "Archivo creado",
+                description: result.params.name,
+              });
+            } else if (result.params.operation === 'update') {
+              responseMessage = `He actualizado el archivo "${result.result.file?.name || result.params.fileId}"`;
+              toast({
+                title: "Archivo actualizado",
+                description: result.result.file?.name || result.params.fileId,
+              });
+            } else if (result.params.operation === 'delete') {
+              responseMessage = `He eliminado el archivo correctamente`;
+              toast({
+                title: "Archivo eliminado",
+                description: "Operación completada",
+              });
+            } else {
+              responseMessage = `He completado la operación de Google Drive "${result.params.operation}"`;
+              toast({
+                title: "Operación completada",
+                description: `${result.params.operation}`,
+              });
+            }
           }
 
           // Añadir respuesta del sistema

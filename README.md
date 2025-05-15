@@ -1,6 +1,6 @@
 # Asistente Personal
 
-Un asistente personal inteligente basado en Claude 3.7 Sonnet con integración de Model Context Protocol (MCP) para Gmail y Calendar.
+Un asistente personal inteligente basado en Claude 3.5 Sonnet con integración de Model Context Protocol (MCP) para Gmail y Calendar.
 
 ## Características
 
