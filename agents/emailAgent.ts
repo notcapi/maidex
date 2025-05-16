@@ -94,7 +94,8 @@ export class EmailAgent {
     cc?: string[],
     bcc?: string[],
     mimeType?: string,
-    htmlBody?: string
+    htmlBody?: string,
+    driveAttachments?: string[]
   }) {
     try {
       console.log('Iniciando envío de correo con opciones:', JSON.stringify(options, null, 2));
@@ -103,8 +104,11 @@ export class EmailAgent {
       const auth = new google.auth.OAuth2();
       auth.setCredentials({ access_token: accessToken });
 
-      // Determinar tipo de contenido (por defecto texto plano)
-      const mimeType = options.mimeType || 'text/plain';
+      // Verificar si hay adjuntos de Drive
+      const hasDriveAttachments = options.driveAttachments && Array.isArray(options.driveAttachments) && options.driveAttachments.length > 0;
+      
+      // Si hay adjuntos de Drive, forzar multipart/mixed, de lo contrario usar el tipo proporcionado
+      const mimeType = hasDriveAttachments ? 'multipart/mixed' : (options.mimeType || 'text/plain');
       
       // Convertir el destinatario a array si es una cadena
       const toArray = Array.isArray(options.to) ? options.to : [options.to];
@@ -128,31 +132,103 @@ export class EmailAgent {
         headers.push(`Bcc: ${options.bcc.join(', ')}`);
       }
       
-      // Crear el cuerpo del correo según el tipo MIME
-      if (mimeType === 'text/plain') {
-        headers.push('Content-Type: text/plain; charset=UTF-8');
-        emailLines = [...headers, '', options.body];
-      } else if (mimeType === 'text/html') {
-        headers.push('Content-Type: text/html; charset=UTF-8');
-        emailLines = [...headers, '', options.body];
-      } else if (mimeType === 'multipart/alternative' && options.htmlBody) {
-        // Crear un correo multipart con versión texto y HTML
-        const boundary = `boundary_${Math.random().toString(36).substring(2)}`;
-        headers.push(`Content-Type: multipart/alternative; boundary=${boundary}`);
+      // Generar un límite único para partes multipart
+      const boundary = `boundary_${Math.random().toString(36).substring(2)}`;
+      
+      // Si tenemos adjuntos de Drive, usar formato multipart/mixed
+      if (hasDriveAttachments && options.driveAttachments) {
+        console.log(`Procesando ${options.driveAttachments.length} adjuntos de Drive`);
         
-        emailLines = [
-          ...headers,
-          '',
+        // Configurar el cliente de Drive
+        const drive = google.drive({version: 'v3', auth});
+        
+        headers.push(`Content-Type: multipart/mixed; boundary=${boundary}`);
+        emailLines = [...headers, ''];
+        
+        // Añadir la parte del texto
+        emailLines.push(
           `--${boundary}`,
           'Content-Type: text/plain; charset=UTF-8',
           '',
-          options.body,
-          `--${boundary}`,
-          'Content-Type: text/html; charset=UTF-8',
-          '',
-          options.htmlBody,
-          `--${boundary}--`
-        ];
+          options.body
+        );
+        
+        // Si hay una versión HTML del cuerpo, añadirla también
+        if (options.htmlBody) {
+          emailLines.push(
+            `--${boundary}`,
+            'Content-Type: text/html; charset=UTF-8',
+            '',
+            options.htmlBody
+          );
+        }
+        
+        // Procesar cada adjunto de Drive
+        for (const fileId of options.driveAttachments) {
+          try {
+            console.log(`Procesando adjunto con ID: ${fileId}`);
+            
+            // Obtener metadatos del archivo
+            const fileMetadata = await drive.files.get({
+              fileId,
+              fields: 'name,mimeType'
+            });
+            
+            // Obtener el contenido del archivo
+            const fileContent = await drive.files.get({
+              fileId,
+              alt: 'media'
+            }, {
+              responseType: 'arraybuffer'
+            });
+            
+            // Codificar el contenido en base64
+            const base64Content = Buffer.from(fileContent.data as ArrayBuffer).toString('base64');
+            
+            // Añadir el adjunto como parte multipart
+            emailLines.push(
+              `--${boundary}`,
+              `Content-Type: ${fileMetadata.data.mimeType}; name="${fileMetadata.data.name}"`,
+              `Content-Disposition: attachment; filename="${fileMetadata.data.name}"`,
+              'Content-Transfer-Encoding: base64',
+              '',
+              base64Content
+            );
+            
+            console.log(`Adjunto añadido: ${fileMetadata.data.name}`);
+          } catch (err) {
+            console.error(`Error al procesar adjunto con ID ${fileId}:`, err);
+          }
+        }
+        
+        // Cerrar el límite multipart
+        emailLines.push(`--${boundary}--`);
+      } else {
+        // Sin adjuntos, procesar según el tipo MIME original
+        if (mimeType === 'text/plain') {
+          headers.push('Content-Type: text/plain; charset=UTF-8');
+          emailLines = [...headers, '', options.body];
+        } else if (mimeType === 'text/html') {
+          headers.push('Content-Type: text/html; charset=UTF-8');
+          emailLines = [...headers, '', options.body];
+        } else if (mimeType === 'multipart/alternative' && options.htmlBody) {
+          // Crear un correo multipart con versión texto y HTML
+          headers.push(`Content-Type: multipart/alternative; boundary=${boundary}`);
+          
+          emailLines = [
+            ...headers,
+            '',
+            `--${boundary}`,
+            'Content-Type: text/plain; charset=UTF-8',
+            '',
+            options.body,
+            `--${boundary}`,
+            'Content-Type: text/html; charset=UTF-8',
+            '',
+            options.htmlBody,
+            `--${boundary}--`
+          ];
+        }
       }
       
       // Convertir el email a formato base64 URL-safe

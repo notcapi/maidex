@@ -1,5 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useTheme } from 'next-themes';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle, BarChart4, PieChart } from "lucide-react";
 
 declare global {
   interface Window {
@@ -36,13 +39,15 @@ const DataCharts: React.FC<DataChartsProps> = ({ emails, events, type }) => {
   const { theme, resolvedTheme } = useTheme();
   const [chartError, setChartError] = useState<string | null>(null);
   const [isGoogleAPILoaded, setIsGoogleAPILoaded] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   // Detectar tema actual para aplicar en los gráficos
   const isDarkMode = theme === 'dark' || resolvedTheme === 'dark';
-  // Colores para gráficos adaptados a modo oscuro/claro
+  
+  // Colores para gráficos adaptados a tokens de diseño
   const chartColors = isDarkMode 
-    ? ['#90caf9', '#f48fb1', '#ffcc80', '#a5d6a7', '#ce93d8', '#81d4fa']
-    : ['#1565c0', '#c2185b', '#ef6c00', '#2e7d32', '#6a1b9a', '#0277bd'];
+    ? ['hsl(var(--chart-1))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))', 'hsl(var(--chart-4))', 'hsl(var(--chart-5))']
+    : ['hsl(var(--chart-1))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))', 'hsl(var(--chart-4))', 'hsl(var(--chart-5))'];
 
   useEffect(() => {
     // Inicializar el objeto de control
@@ -56,6 +61,7 @@ const DataCharts: React.FC<DataChartsProps> = ({ emails, events, type }) => {
 
       // Cargar la API de Google Charts
       if (!window.google) {
+        setIsLoading(true);
         const script = document.createElement('script');
         script.src = 'https://www.gstatic.com/charts/loader.js';
         script.async = true;
@@ -64,17 +70,20 @@ const DataCharts: React.FC<DataChartsProps> = ({ emails, events, type }) => {
           window.google.charts.setOnLoadCallback(() => {
             window.charts[type === 'emails' ? 'emailsLoaded' : 'eventsLoaded'] = true;
             setIsGoogleAPILoaded(true);
+            setIsLoading(false);
             drawChart();
           });
         };
         script.onerror = () => {
           setChartError('No se pudo cargar la librería de gráficos');
+          setIsLoading(false);
         };
         document.head.appendChild(script);
       } else if (window.google && window.google.charts) {
         // La API ya está cargada
         setIsGoogleAPILoaded(true);
         window.charts[type === 'emails' ? 'emailsLoaded' : 'eventsLoaded'] = true;
+        setIsLoading(false);
         drawChart();
       }
     }
@@ -95,34 +104,37 @@ const DataCharts: React.FC<DataChartsProps> = ({ emails, events, type }) => {
       style.textContent = `
         /* Estilos para textos en gráficos Google Charts en modo oscuro */
         .google-visualization-tooltip {
-          background-color: #2d3748 !important;
-          color: #e2e8f0 !important;
-          border-color: #4a5568 !important;
+          background-color: hsl(var(--popover)) !important;
+          color: hsl(var(--popover-foreground)) !important;
+          border-color: hsl(var(--border)) !important;
+          border-radius: var(--radius) !important;
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+          padding: 8px !important;
         }
         .google-visualization-tooltip-item-list {
-          color: #e2e8f0 !important;
+          color: hsl(var(--popover-foreground)) !important;
         }
         .google-visualization-tooltip-item-list li span:first-child {
-          color: #90caf9 !important;
+          color: hsl(var(--primary)) !important;
         }
         .google-visualization-tooltip-item-list li span:last-child {
-          color: #ffffff !important;
+          color: hsl(var(--popover-foreground)) !important;
         }
         .google-visualization-table-tr-head th, 
         .google-visualization-table-tr-head td {
-          background-color: #2d3748 !important;
-          color: #ffffff !important;
-          font-weight: bold !important;
-          border-color: #4a5568 !important;
+          background-color: hsl(var(--muted)) !important;
+          color: hsl(var(--muted-foreground)) !important;
+          font-weight: 600 !important;
+          border-color: hsl(var(--border)) !important;
         }
         .google-visualization-table-tr-odd td, 
         .google-visualization-table-tr-even td {
-          background-color: #1a202c !important;
-          color: #e2e8f0 !important;
-          border-color: #2d3748 !important;
+          background-color: hsl(var(--card)) !important;
+          color: hsl(var(--card-foreground)) !important;
+          border-color: hsl(var(--border)) !important;
         }
         text.google-visualization-tooltip-item {
-          fill: #ffffff !important;
+          fill: hsl(var(--popover-foreground)) !important;
         }
       `;
       
@@ -169,7 +181,7 @@ const DataCharts: React.FC<DataChartsProps> = ({ emails, events, type }) => {
       dataTable.addColumn('number', 'Cantidad');
       dataTable.addRows(senderData);
       
-      const textColor = isDarkMode ? '#ffffff' : '#000000';
+      const textColor = isDarkMode ? 'hsl(var(--foreground))' : 'hsl(var(--foreground))';
       const options = {
         title: 'Distribución de correos por remitente',
         titleTextStyle: {
@@ -188,24 +200,40 @@ const DataCharts: React.FC<DataChartsProps> = ({ emails, events, type }) => {
           }
         },
         backgroundColor: { 
-          fill: isDarkMode ? '#1f1f1f' : '#ffffff',
-          stroke: isDarkMode ? '#4a5568' : '#e2e8f0',
+          fill: isDarkMode ? 'hsl(var(--card))' : 'hsl(var(--card))',
+          stroke: isDarkMode ? 'hsl(var(--border))' : 'hsl(var(--border))',
           strokeWidth: 1
         },
         tooltip: { 
           textStyle: { 
-            color: isDarkMode ? '#ffffff' : '#000000',
+            color: isDarkMode ? 'hsl(var(--popover-foreground))' : 'hsl(var(--popover-foreground))',
             fontSize: 13
           },
           showColorCode: true
         }
       };
 
-      const chart = new window.google.visualization.PieChart(chartRef.current);
-      chart.draw(dataTable, options);
+      // Limpiar el contenedor antes de renderizar
+      while (chartRef.current.firstChild) {
+        chartRef.current.removeChild(chartRef.current.firstChild);
+      }
+
+      // Crear el div para el gráfico de donut
+      const donutChartDiv = document.createElement('div');
+      donutChartDiv.style.width = '100%';
+      donutChartDiv.style.height = '300px';
+      donutChartDiv.style.marginBottom = '2rem';
+      chartRef.current.appendChild(donutChartDiv);
+      
+      const donutChart = new window.google.visualization.PieChart(donutChartDiv);
+      donutChart.draw(dataTable, options);
+      
+      // Crear gráfico de tabla para detalles
+      drawEmailTable();
+
     } catch (error) {
-      console.error('Error al dibujar el gráfico de correos:', error);
-      setChartError('Error al generar el gráfico de correos');
+      console.error('Error en drawEmailCharts:', error);
+      setChartError('No se pudo generar el gráfico de correos');
     }
   };
 
@@ -411,6 +439,55 @@ const DataCharts: React.FC<DataChartsProps> = ({ emails, events, type }) => {
     return Object.entries(senders);
   };
 
+  // Implementación de la función drawEmailTable faltante
+  const drawEmailTable = () => {
+    if (!emails || !chartRef.current || emails.length === 0) return;
+
+    try {
+      // Crear tabla con detalles de los correos
+      const dataTable = new window.google.visualization.DataTable();
+      dataTable.addColumn('string', 'Remitente');
+      dataTable.addColumn('string', 'Asunto');
+      dataTable.addColumn('string', 'Fecha');
+
+      const tableData = emails.map(email => [
+        email.from,
+        email.subject,
+        new Date(email.date).toLocaleString('es', { 
+          dateStyle: 'short', 
+          timeStyle: 'short' 
+        })
+      ]);
+
+      dataTable.addRows(tableData);
+
+      // Crear el div para la tabla
+      const tableDiv = document.createElement('div');
+      tableDiv.style.width = '100%';
+      tableDiv.style.marginTop = '1rem';
+      tableDiv.className = 'email-table-container';
+      chartRef.current.appendChild(tableDiv);
+
+      const table = new window.google.visualization.Table(tableDiv);
+      table.draw(dataTable, {
+        showRowNumber: true,
+        width: '100%',
+        height: '100%',
+        cssClassNames: {
+          headerRow: 'shadcn-header-row',
+          tableRow: 'shadcn-table-row',
+          oddTableRow: 'shadcn-odd-row',
+          selectedTableRow: 'shadcn-selected-row',
+          hoverTableRow: 'shadcn-hover-row',
+          headerCell: 'shadcn-header-cell',
+          tableCell: 'shadcn-table-cell',
+        }
+      });
+    } catch (error) {
+      console.error('Error al crear la tabla de correos:', error);
+    }
+  };
+
   // Si no hay datos para mostrar
   if ((type === 'emails' && (!emails || emails.length === 0)) || 
       (type === 'events' && (!events || events.length === 0))) {
@@ -423,40 +500,56 @@ const DataCharts: React.FC<DataChartsProps> = ({ emails, events, type }) => {
     );
   }
 
-  // Si hay un error específico en la generación del gráfico
+  // Mostrar estado de carga o error
+  if (isLoading) {
+    return (
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            {type === 'emails' ? <BarChart4 className="h-5 w-5" /> : <PieChart className="h-5 w-5" />}
+            {type === 'emails' ? 'Análisis de Correos' : 'Análisis de Eventos'}
+          </CardTitle>
+          <CardDescription>Cargando visualizaciones...</CardDescription>
+        </CardHeader>
+        <CardContent className="flex justify-center items-center h-[300px]">
+          <div className="animate-pulse flex flex-col items-center justify-center space-y-4">
+            <div className="rounded-full bg-muted h-16 w-16 flex items-center justify-center">
+              <div className="animate-spin h-8 w-8 rounded-full border-2 border-primary border-t-transparent"></div>
+            </div>
+            <div className="text-sm text-muted-foreground">Cargando gráficos...</div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   if (chartError) {
     return (
-      <div className="data-charts">
-        <div className="flex flex-col items-center justify-center h-[400px] bg-card rounded-md border p-4">
-          <p className="text-foreground mb-4">{chartError}</p>
-          {type === 'events' && events && events.length > 0 && (
-            <div className="w-full max-w-lg px-4">
-              <p className="font-medium mb-2 text-center text-foreground">Eventos programados:</p>
-              <ul className="space-y-2">
-                {events.slice(0, 5).map((event, index) => (
-                  <li key={event.id || index} className="p-3 rounded bg-muted/20 border border-muted">
-                    <strong className="text-foreground">{event.summary}</strong>
-                    <div className="text-sm text-foreground">
-                      {new Date(event.start.dateTime).toLocaleString()} - {new Date(event.end.dateTime).toLocaleString()}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </div>
-      </div>
+      <Alert variant="destructive" className="mb-6">
+        <AlertCircle className="h-4 w-4" />
+        <AlertTitle>Error</AlertTitle>
+        <AlertDescription>{chartError}</AlertDescription>
+      </Alert>
     );
   }
 
   return (
-    <div className="data-charts">
-      <div 
-        ref={chartRef} 
-        style={{ width: '100%', height: '400px', marginBottom: '20px' }}
-        className="chart-container bg-card p-2 rounded-md border border-border"
-      />
-    </div>
+    <Card className="w-full">
+      <CardHeader>
+        <CardTitle className="text-lg flex items-center gap-2">
+          {type === 'emails' ? <BarChart4 className="h-5 w-5" /> : <PieChart className="h-5 w-5" />}
+          {type === 'emails' ? 'Análisis de Correos' : 'Análisis de Eventos'}
+        </CardTitle>
+        <CardDescription>
+          {type === 'emails' 
+            ? 'Visualización de estadísticas de correos recientes' 
+            : 'Visualización de estadísticas de eventos de calendario'}
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div ref={chartRef} className="w-full overflow-hidden rounded-md" />
+      </CardContent>
+    </Card>
   );
 };
 

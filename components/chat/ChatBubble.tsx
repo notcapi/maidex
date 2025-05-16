@@ -3,6 +3,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
+import { Download } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 type File = {
   id: string;
@@ -41,23 +43,26 @@ export function ChatBubble({
   showDownload = false,
 }: ChatBubbleProps) {
   const isUser = role === "user";
-  const initial = userName ? userName.charAt(0).toUpperCase() : isUser ? "U" : "AI";
+  const initial = userName ? userName.charAt(0).toUpperCase() : isUser ? "U" : "A";
 
+  // Componente de ChatBubble para el asistente
   if (!isUser) {
     return (
       <motion.div
         initial="hidden"
         animate="visible"
         variants={bubbleVariants}
-        className="flex items-start space-x-3 px-4 py-4 mt-2 first:mt-8"
+        className="flex items-start space-x-3 px-4 py-2.5 mt-2 first:mt-8"
       >
-        <div className="w-9 h-9 shrink-0 flex items-center justify-center rounded-full bg-gradient-to-br from-black to-gray-700 text-white shadow-md border border-border/20">
-          <span className="font-medium text-sm">AI</span>
-        </div>
+        <Avatar className="h-8 w-8 shrink-0 shadow-sm">
+          <AvatarFallback className="bg-gradient-to-br from-slate-700 to-slate-900 text-slate-100 dark:bg-slate-800 dark:text-slate-200 font-medium text-sm">
+            {initial}
+          </AvatarFallback>
+        </Avatar>
         
         <div className="flex flex-col max-w-[85%] md:max-w-[75%] w-full">
-          <div className="bg-card rounded-2xl px-4 py-3 relative shadow-sm border border-border/30">
-            <div className="text-sm md:text-base leading-relaxed text-card-foreground whitespace-pre-wrap break-words">
+          <div className="bg-card dark:bg-slate-900 rounded-xl rounded-tl-sm px-4 py-3 relative shadow-sm border border-border/30 dark:border-slate-700">
+            <div className="text-sm md:text-base leading-relaxed text-card-foreground dark:text-slate-200 whitespace-pre-wrap break-words">
               {message}
             </div>
           </div>
@@ -72,51 +77,44 @@ export function ChatBubble({
                 <div
                   key={file.id}
                   className={cn(
-                    "flex items-center text-xs rounded-lg p-3 bg-muted/60 text-muted-foreground border border-border/30"
+                    "flex items-center text-xs rounded-lg p-2.5 bg-muted/60 dark:bg-slate-800/70 text-muted-foreground dark:text-slate-300 border border-border/30 dark:border-slate-700/50"
                   )}
                 >
                   <FileIcon mimeType={file.mimeType} />
                   <span className="ml-2 truncate max-w-[180px] md:max-w-[300px]">{file.name}</span>
                   
                   {showDownload && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="ml-auto h-8 w-8 rounded-full hover:bg-background"
-                      asChild
-                    >
-                      <a
-                        href={`/api/drive/download?fileId=${file.id}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        aria-label="Descargar archivo"
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="14"
-                          height="14"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                          <polyline points="7 10 12 15 17 10" />
-                          <line x1="12" x2="12" y1="15" y2="3" />
-                        </svg>
-                      </a>
-                    </Button>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="ml-auto h-7 w-7 rounded-full hover:bg-background dark:hover:bg-slate-700"
+                            asChild
+                          >
+                            <a
+                              href={`/api/drive/download?fileId=${file.id}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              aria-label="Descargar archivo"
+                            >
+                              <Download className="h-3.5 w-3.5" />
+                            </a>
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top">Descargar archivo</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   )}
                 </div>
               ))}
             </motion.div>
           )}
           
-          {/* Timestamp */}
+          {/* Timestamp con mejor presentación */}
           {timestamp && (
-            <time className="block mt-1 text-xs text-muted-foreground/70 text-right mr-1">
+            <time className="block mt-1 text-[11px] text-muted-foreground/60 dark:text-slate-500 text-right mr-1">
               {timestamp.toLocaleTimeString('es', { hour: "2-digit", minute: "2-digit" })}
             </time>
           )}
@@ -125,19 +123,19 @@ export function ChatBubble({
     );
   }
   
-  // Mejorar diseño para las burbujas del usuario
+  // ChatBubble para el usuario
   return (
     <motion.div
       initial="hidden"
       animate="visible"
       variants={bubbleVariants}
-      className="flex w-full max-w-full mb-4 px-3 gap-2 justify-end mt-2"
+      className="flex w-full max-w-full mb-4 pl-4 pr-3 gap-3 justify-end mt-2"
     >
       <div className="flex flex-col max-w-[85%] md:max-w-[70%]">
         <div
           className={cn(
-            "p-3 rounded-2xl flex-1 whitespace-pre-wrap break-words",
-            "bg-primary text-primary-foreground rounded-br-none",
+            "p-3 rounded-xl rounded-br-sm flex-1 whitespace-pre-wrap break-words",
+            "bg-primary dark:bg-primary/90 text-primary-foreground",
             "shadow-sm text-sm md:text-base leading-relaxed"
           )}
         >
@@ -153,70 +151,63 @@ export function ChatBubble({
             {files.map((file) => (
               <div
                 key={file.id}
-                className="flex items-center text-xs rounded-lg p-3 bg-primary/80 text-primary-foreground"
+                className="flex items-center text-xs rounded-lg p-2.5 bg-primary/80 dark:bg-primary/70 text-primary-foreground"
               >
                 <FileIcon mimeType={file.mimeType} />
                 <span className="ml-2 truncate max-w-[180px] md:max-w-[300px]">{file.name}</span>
                 
                 {showDownload && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="ml-auto h-8 w-8 rounded-full hover:bg-primary-foreground/10"
-                    asChild
-                  >
-                    <a
-                      href={`/api/drive/download?fileId=${file.id}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      aria-label="Descargar archivo"
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="14"
-                        height="14"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                        <polyline points="7 10 12 15 17 10" />
-                        <line x1="12" x2="12" y1="15" y2="3" />
-                      </svg>
-                    </a>
-                  </Button>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="ml-auto h-7 w-7 rounded-full hover:bg-primary-foreground/10"
+                          asChild
+                        >
+                          <a
+                            href={`/api/drive/download?fileId=${file.id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            aria-label="Descargar archivo"
+                          >
+                            <Download className="h-3.5 w-3.5" />
+                          </a>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="top">Descargar archivo</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 )}
               </div>
             ))}
           </motion.div>
         )}
 
-        {/* Timestamp */}
+        {/* Timestamp con mejor presentación */}
         {timestamp && (
-          <div className="text-xs mt-1 text-muted-foreground/70 text-right">
+          <div className="text-[11px] mt-1 text-muted-foreground/60 dark:text-slate-500 text-right">
             {timestamp.toLocaleTimeString('es', { hour: "2-digit", minute: "2-digit" })}
           </div>
         )}
       </div>
 
-      <Avatar className="h-9 w-9 shrink-0 shadow-sm border">
+      <Avatar className="h-8 w-8 shrink-0 shadow-sm">
         <AvatarImage src={userImage} />
-        <AvatarFallback className="bg-primary/10 text-primary font-medium text-sm">{initial}</AvatarFallback>
+        <AvatarFallback className="bg-primary/10 dark:bg-primary/20 text-primary font-medium text-sm">{initial}</AvatarFallback>
       </Avatar>
     </motion.div>
   );
 }
 
-// Íconos simples para los archivos
+// Íconos para los diferentes tipos de archivos
 function FileIcon({ mimeType }: { mimeType: string }) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
-      width="16"
-      height="16"
+      width="14"
+      height="14"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"

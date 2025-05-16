@@ -318,4 +318,95 @@ export class DriveAgent {
         };
     }
   }
+
+  /**
+   * Busca un archivo por nombre exacto o cercano y devuelve su ID
+   * @param accessToken Token de acceso de Google
+   * @param fileName Nombre del archivo a buscar
+   * @returns ID del archivo encontrado o null si no se encuentra
+   */
+  async findFileByName(accessToken: string, fileName: string): Promise<{
+    success: boolean,
+    fileId?: string,
+    file?: any,
+    error?: string
+  }> {
+    try {
+      this.setupDriveClient(accessToken);
+      
+      // Primero intentar búsqueda exacta
+      let searchQuery = `name = '${fileName}' and trashed = false`;
+      
+      let response = await this.drive.files.list({
+        q: searchQuery,
+        pageSize: 1,
+        fields: 'files(id, name, mimeType, createdTime, modifiedTime, size)'
+      });
+      
+      if (response.data.files && response.data.files.length > 0) {
+        // Si encontramos coincidencia exacta
+        return {
+          success: true,
+          fileId: response.data.files[0].id,
+          file: response.data.files[0]
+        };
+      }
+      
+      // Si no hay coincidencia exacta, probar contiene
+      searchQuery = `name contains '${fileName}' and trashed = false`;
+      
+      response = await this.drive.files.list({
+        q: searchQuery,
+        pageSize: 5, // Limitar a 5 resultados
+        fields: 'files(id, name, mimeType, createdTime, modifiedTime, size)'
+      });
+      
+      if (response.data.files && response.data.files.length > 0) {
+        // Intentar encontrar la mejor coincidencia
+        // Primero buscamos coincidencia de palabras completas
+        const fileNameLower = fileName.toLowerCase();
+        const terms = fileNameLower.split(/\s+/);
+        
+        // Ordenar por similitud según cuántas palabras coinciden
+        const sortedFiles = [...response.data.files].sort((a, b) => {
+          const aNameLower = a.name.toLowerCase();
+          const bNameLower = b.name.toLowerCase();
+          
+          // Si uno contiene exactamente el término de búsqueda
+          if (aNameLower.includes(fileNameLower) && !bNameLower.includes(fileNameLower)) return -1;
+          if (bNameLower.includes(fileNameLower) && !aNameLower.includes(fileNameLower)) return 1;
+          
+          // Contar cuántos términos contiene cada nombre
+          let aMatches = 0;
+          let bMatches = 0;
+          
+          terms.forEach(term => {
+            if (aNameLower.includes(term)) aMatches++;
+            if (bNameLower.includes(term)) bMatches++;
+          });
+          
+          // El de más coincidencias primero
+          return bMatches - aMatches;
+        });
+        
+        return {
+          success: true,
+          fileId: sortedFiles[0].id,
+          file: sortedFiles[0]
+        };
+      }
+      
+      // No se encontró ningún archivo
+      return {
+        success: false,
+        error: `No se encontró el archivo "${fileName}"`
+      };
+    } catch (error: any) {
+      console.error('Error al buscar archivo por nombre:', error);
+      return {
+        success: false,
+        error: error.message || 'Error al buscar archivo por nombre'
+      };
+    }
+  }
 } 

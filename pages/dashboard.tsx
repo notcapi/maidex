@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/router';
 import DataCharts from '../components/DataCharts';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -16,6 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Mail, Calendar, Shield, ArrowUpRight } from 'lucide-react';
 
 // Definir tipos para los datos
 interface Email {
@@ -93,200 +94,207 @@ export default function Dashboard() {
     }
   };
 
+  // Formatear fecha para mostrarla más legiblemente
+  const formatDate = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleString('es-ES', {
+        day: 'numeric',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (e) {
+      return dateString;
+    }
+  };
+
   if (status === 'loading' || loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      <div className="flex items-center justify-center min-h-screen bg-background dark:bg-slate-950">
+        <div className="flex flex-col items-center justify-center space-y-4">
+          <div className="relative h-16 w-16">
+            <div className="absolute top-0 left-0 h-16 w-16 rounded-full border-4 border-t-primary border-opacity-20 animate-spin"></div>
+          </div>
+          <p className="text-sm text-muted-foreground dark:text-slate-400">Cargando tu dashboard...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto space-y-6">
-      <div className="flex flex-col">
-        <h1 className="text-3xl font-bold">Panel de Estadísticas</h1>
-        <p className="text-muted-foreground">Visualiza tus correos y eventos recientes</p>
-      </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Correos</CardTitle>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              className="h-4 w-4 text-muted-foreground"
-            >
-              <path d="M22 17a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9.5C2 7 4 5 6.5 5H18c2.2 0 4 1.8 4 4v8Z" />
-              <polyline points="15,9 10,14 8.5,12.5" />
-            </svg>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{emails.length}</div>
-            <p className="text-xs text-muted-foreground">
-              Correos recibidos recientemente
-            </p>
-          </CardContent>
-        </Card>
+    <div className="min-h-screen bg-background dark:bg-slate-950">
+      <div className="container mx-auto p-6 space-y-8">
+        <div className="flex flex-col space-y-1.5">
+          <h1 className="text-3xl font-bold text-foreground dark:text-slate-100">Panel de Estadísticas</h1>
+          <p className="text-muted-foreground dark:text-slate-400">Visualiza tus correos y eventos recientes</p>
+          <Separator className="my-4" />
+        </div>
         
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Eventos Próximos</CardTitle>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              className="h-4 w-4 text-muted-foreground"
-            >
-              <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
-              <line x1="16" x2="16" y1="2" y2="6" />
-              <line x1="8" x2="8" y1="2" y2="6" />
-              <line x1="3" x2="21" y1="10" y2="10" />
-            </svg>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{events.length}</div>
-            <p className="text-xs text-muted-foreground">
-              Eventos programados para hoy
-            </p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Estado de Conexión</CardTitle>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              className="h-4 w-4 text-muted-foreground"
-            >
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-            </svg>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center space-x-2">
-              <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">
-                Conectado
-              </Badge>
-              <span className="text-sm text-muted-foreground">
-                {session?.user?.email}
-              </span>
-            </div>
-            <Progress value={100} className="mt-3" />
-          </CardContent>
-        </Card>
-      </div>
-      
-      <Tabs defaultValue="emails" className="w-full">
-        <TabsList className="grid w-full md:w-[400px] grid-cols-2">
-          <TabsTrigger value="emails">Correos Electrónicos</TabsTrigger>
-          <TabsTrigger value="events">Eventos del Calendario</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="emails" className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Análisis de Correos</CardTitle>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Card className="overflow-hidden border border-border dark:border-slate-700">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-card dark:bg-slate-900">
+              <CardTitle className="text-sm font-medium">Total Correos</CardTitle>
+              <Mail className="h-4 w-4 text-muted-foreground dark:text-slate-400" />
             </CardHeader>
-            <CardContent>
-              {emails.length > 0 ? (
-                <DataCharts emails={emails} type="emails" />
-              ) : (
-                <p className="text-muted-foreground">No hay datos de correos para mostrar</p>
-              )}
+            <CardContent className="pt-4">
+              <div className="text-2xl font-bold text-foreground dark:text-slate-100">{emails.length}</div>
+              <p className="text-xs text-muted-foreground dark:text-slate-400">
+                Correos recibidos recientemente
+                <span className="inline-flex items-center ml-2 text-primary">
+                  <ArrowUpRight className="h-3 w-3" />
+                </span>
+              </p>
             </CardContent>
           </Card>
           
-          {emails.length > 0 && (
-            <Card className="mt-6">
-              <CardHeader>
-                <CardTitle>Correos Recientes</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Remitente</TableHead>
-                      <TableHead>Asunto</TableHead>
-                      <TableHead>Fecha</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {emails.slice(0, 5).map((email) => (
-                      <TableRow key={email.id}>
-                        <TableCell>{email.from}</TableCell>
-                        <TableCell className="text-muted-foreground">{email.subject}</TableCell>
-                        <TableCell className="text-muted-foreground">{email.date}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-        
-        <TabsContent value="events" className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Análisis de Eventos</CardTitle>
+          <Card className="overflow-hidden border border-border dark:border-slate-700">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-card dark:bg-slate-900">
+              <CardTitle className="text-sm font-medium">Eventos Próximos</CardTitle>
+              <Calendar className="h-4 w-4 text-muted-foreground dark:text-slate-400" />
             </CardHeader>
-            <CardContent>
-              {events.length > 0 ? (
-                <DataCharts events={events} type="events" />
-              ) : (
-                <p className="text-muted-foreground">No hay datos de eventos para mostrar</p>
-              )}
+            <CardContent className="pt-4">
+              <div className="text-2xl font-bold text-foreground dark:text-slate-100">{events.length}</div>
+              <p className="text-xs text-muted-foreground dark:text-slate-400">
+                Eventos programados para hoy
+              </p>
             </CardContent>
           </Card>
           
-          {events.length > 0 && (
-            <Card className="mt-6">
-              <CardHeader>
-                <CardTitle>Eventos Próximos</CardTitle>
+          <Card className="overflow-hidden border border-border dark:border-slate-700">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-card dark:bg-slate-900">
+              <CardTitle className="text-sm font-medium">Estado de Conexión</CardTitle>
+              <Shield className="h-4 w-4 text-muted-foreground dark:text-slate-400" />
+            </CardHeader>
+            <CardContent className="pt-4">
+              <div className="flex items-center space-x-2">
+                <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20 dark:bg-green-500/20">
+                  Conectado
+                </Badge>
+                <span className="text-sm text-muted-foreground dark:text-slate-400">
+                  {session?.user?.email}
+                </span>
+              </div>
+              <Progress value={100} className="mt-3" />
+            </CardContent>
+          </Card>
+        </div>
+        
+        <Tabs defaultValue="emails" className="w-full">
+          <TabsList className="grid w-full md:w-[400px] grid-cols-2 mb-6">
+            <TabsTrigger value="emails">Correos Electrónicos</TabsTrigger>
+            <TabsTrigger value="events">Eventos del Calendario</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="emails">
+            <Card className="border border-border dark:border-slate-700">
+              <CardHeader className="bg-card dark:bg-slate-900 border-b border-border dark:border-slate-700">
+                <CardTitle className="text-lg flex items-center">
+                  <Mail className="mr-2 h-5 w-5 text-primary dark:text-primary/90" />
+                  Análisis de Correos
+                </CardTitle>
+                <CardDescription className="text-muted-foreground dark:text-slate-400">
+                  Datos y estadísticas de tus correos recientes
+                </CardDescription>
               </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Título</TableHead>
-                      <TableHead>Inicio</TableHead>
-                      <TableHead>Fin</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {events.slice(0, 5).map((event) => (
-                      <TableRow key={event.id}>
-                        <TableCell>{event.summary}</TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {new Date(event.start.dateTime).toLocaleString()}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {new Date(event.end.dateTime).toLocaleString()}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+              <CardContent className="p-6">
+                {emails.length > 0 ? (
+                  <DataCharts emails={emails} type="emails" />
+                ) : (
+                  <p className="text-muted-foreground dark:text-slate-400 text-center py-8">
+                    No hay datos de correos para mostrar
+                  </p>
+                )}
               </CardContent>
             </Card>
-          )}
-        </TabsContent>
-      </Tabs>
+            
+            {emails.length > 0 && (
+              <Card className="mt-6 border border-border dark:border-slate-700">
+                <CardHeader className="bg-card dark:bg-slate-900 border-b border-border dark:border-slate-700">
+                  <CardTitle className="text-lg">Correos Recientes</CardTitle>
+                  <CardDescription className="text-muted-foreground dark:text-slate-400">
+                    Los últimos {Math.min(emails.length, 5)} correos recibidos
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="hover:bg-muted/50 dark:hover:bg-slate-800/50">
+                        <TableHead className="w-[200px]">Remitente</TableHead>
+                        <TableHead>Asunto</TableHead>
+                        <TableHead className="text-right w-[140px]">Fecha</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {emails.slice(0, 5).map((email) => (
+                        <TableRow key={email.id} className="hover:bg-muted/50 dark:hover:bg-slate-800/50">
+                          <TableCell className="font-medium">{email.from}</TableCell>
+                          <TableCell className="text-muted-foreground dark:text-slate-400">{email.subject}</TableCell>
+                          <TableCell className="text-muted-foreground dark:text-slate-400 text-right">{formatDate(email.date)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+          
+          <TabsContent value="events">
+            <Card className="border border-border dark:border-slate-700">
+              <CardHeader className="bg-card dark:bg-slate-900 border-b border-border dark:border-slate-700">
+                <CardTitle className="text-lg flex items-center">
+                  <Calendar className="mr-2 h-5 w-5 text-primary dark:text-primary/90" />
+                  Análisis de Eventos
+                </CardTitle>
+                <CardDescription className="text-muted-foreground dark:text-slate-400">
+                  Datos y estadísticas de tus próximos eventos
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-6">
+                {events.length > 0 ? (
+                  <DataCharts events={events} type="events" />
+                ) : (
+                  <p className="text-muted-foreground dark:text-slate-400 text-center py-8">
+                    No hay eventos programados para mostrar
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+            
+            {events.length > 0 && (
+              <Card className="mt-6 border border-border dark:border-slate-700">
+                <CardHeader className="bg-card dark:bg-slate-900 border-b border-border dark:border-slate-700">
+                  <CardTitle className="text-lg">Eventos Próximos</CardTitle>
+                  <CardDescription className="text-muted-foreground dark:text-slate-400">
+                    Tus próximos {Math.min(events.length, 5)} eventos programados
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="hover:bg-muted/50 dark:hover:bg-slate-800/50">
+                        <TableHead>Título</TableHead>
+                        <TableHead className="text-right w-[220px]">Horario</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {events.slice(0, 5).map((event) => (
+                        <TableRow key={event.id} className="hover:bg-muted/50 dark:hover:bg-slate-800/50">
+                          <TableCell className="font-medium">{event.summary}</TableCell>
+                          <TableCell className="text-muted-foreground dark:text-slate-400 text-right">
+                            {formatDate(event.start.dateTime)} - {formatDate(event.end.dateTime)}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
   );
 } 

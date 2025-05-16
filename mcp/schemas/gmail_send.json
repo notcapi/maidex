@@ -30,6 +30,13 @@
         "type": "string",
         "description": "Cuerpo del correo (puede ser texto plano o HTML)"
       },
+      "driveAttachments": {
+        "type": "array",
+        "description": "Lista de IDs de archivos de Google Drive para adjuntar al correo",
+        "items": {
+          "type": "string"
+        }
+      },
       "cc": {
         "type": "array",
         "description": "Lista de destinatarios en copia",
@@ -49,7 +56,7 @@
       "mimeType": {
         "type": "string",
         "description": "Tipo MIME del correo",
-        "enum": ["text/plain", "text/html", "multipart/alternative"],
+        "enum": ["text/plain", "text/html", "multipart/alternative", "multipart/mixed"],
         "default": "text/plain"
       },
       "htmlBody": {
