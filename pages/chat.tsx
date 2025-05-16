@@ -536,20 +536,16 @@ export default function Chat() {
 
   return (
     <Card className="max-w-4xl mx-auto border shadow-md">
-      <CardHeader className="bg-primary text-primary-foreground">
-        <div className="flex justify-between items-center">
+      <CardHeader className="bg-black text-white rounded-t-lg px-6 py-4">
+        <div className="flex items-center justify-between">
           <div>
-            <CardTitle>Asistente Personal</CardTitle>
-            <CardDescription className="text-primary-foreground/80">
-              Puedo enviar correos, crear eventos en tu calendario y gestionar tus archivos en Google Drive
-            </CardDescription>
+            <h1 className="text-lg font-semibold">Asistente Personal</h1>
+            <p className="text-sm text-gray-300">Puedo enviar correos, crear eventos y gestionar Drive</p>
           </div>
           <Button 
-            variant="outline" 
-            size="sm" 
             onClick={handleResetConversation}
             disabled={loading}
-            className="text-primary-foreground border-primary-foreground hover:bg-primary-foreground hover:text-primary"
+            className="rounded-full bg-white text-black px-4 py-2 text-sm font-medium shadow hover:bg-gray-100 transition"
           >
             Reiniciar conversación
           </Button>
