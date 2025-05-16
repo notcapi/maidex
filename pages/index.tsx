@@ -1,115 +1,90 @@
 import React from 'react';
-import Link from 'next/link';
 import { useSession, signIn } from 'next-auth/react';
 import { useRouter } from 'next/router';
 import { 
   Card, 
   CardContent, 
   CardDescription, 
-  CardFooter, 
   CardHeader, 
   CardTitle 
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { PersonIcon } from "@radix-ui/react-icons";
 
 export default function Home() {
   const { data: session } = useSession();
   const router = useRouter();
 
   return (
-    <div className="container mx-auto">
-      <div className="max-w-5xl mx-auto space-y-8">
-        <div className="text-center">
-          <h1 className="text-4xl font-bold mb-6">Maidex</h1>
-          <p className="text-xl text-muted-foreground mb-8">
-            Tu asistente inteligente para Gmail y Calendar con Claude 3.5 Sonnet
-          </p>
-        </div>
-
+    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-b from-background to-muted/30">
+      <div className="max-w-[480px] w-full mx-auto">
         {session ? (
-          <div className="space-y-6">
-            <Card className="border shadow-md">
-              <CardHeader>
-                <CardTitle>¡Bienvenido {session.user?.name || 'de nuevo'}!</CardTitle>
-                <CardDescription>Estás conectado como {session.user?.email}</CardDescription>
-              </CardHeader>
-              <Separator />
-              <CardContent className="pt-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Button 
-                    onClick={() => router.push('/chat')}
-                    className="w-full"
-                    size="lg"
-                  >
-                    Ir al Chat
-                  </Button>
-                  
-                  <Button 
-                    onClick={() => router.push('/dashboard')}
-                    variant="secondary"
-                    className="w-full"
-                    size="lg"
-                  >
-                    Ver Dashboard
-                  </Button>
+          <Card className="border shadow-lg overflow-hidden">
+            <CardHeader className="pb-2">
+              <div className="flex items-center gap-3">
+                {/* Avatar o icono de IA */}
+                <div className="flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 text-primary">
+                  <PersonIcon className="w-6 h-6" />
                 </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border bg-muted/40">
-              <CardHeader>
-                <CardTitle className="text-lg">¿Tienes problemas con la autenticación?</CardTitle>
-                <CardDescription>
-                  Accede a la página de diagnóstico para solucionar problemas
-                </CardDescription>
-              </CardHeader>
-              <CardFooter>
-                <Button
-                  variant="outline"
-                  asChild
-                  className="w-full"
+                <div>
+                  <CardTitle className="text-2xl">¡Hola, {session.user?.name?.split(' ')[0] || 'usuario'}!</CardTitle>
+                  <CardDescription className="text-sm opacity-80">
+                    {session.user?.email}
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            
+            <CardContent className="space-y-6 pt-4">
+              <div>
+                <p className="text-muted-foreground text-sm mb-6">
+                  Tu asistente inteligente para Gmail y Calendar, potenciado con Claude 3.5 Sonnet.
+                  Gestiona tus correos y agenda de forma más eficiente.
+                </p>
+                <Separator className="my-4" />
+              </div>
+              
+              <div className="space-y-3">
+                <Button 
+                  onClick={() => router.push('/chat')}
+                  className="w-full py-6 text-base font-medium"
+                  size="lg"
                 >
-                  <Link href="/auth-status">
-                    Verificar Estado de Autenticación
-                  </Link>
+                  Ir al Chat
                 </Button>
-              </CardFooter>
-            </Card>
-          </div>
+                
+                <Button 
+                  onClick={() => router.push('/dashboard')}
+                  variant="outline"
+                  className="w-full py-5 text-base"
+                >
+                  Ver Dashboard
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         ) : (
-          <Card className="border shadow-md max-w-md mx-auto">
-            <CardHeader>
-              <CardTitle>Iniciar Sesión</CardTitle>
-              <CardDescription>
-                Conecta tu cuenta de Google para empezar a usar el asistente
+          <Card className="border shadow-lg">
+            <CardHeader className="text-center">
+              <div className="mx-auto flex items-center justify-center w-14 h-14 rounded-full bg-primary/10 text-primary mb-3">
+                <PersonIcon className="w-7 h-7" />
+              </div>
+              <CardTitle className="text-2xl">Bienvenido a Maidex</CardTitle>
+              <CardDescription className="text-base mt-2">
+                Tu asistente inteligente para Gmail y Calendar
               </CardDescription>
             </CardHeader>
             <Separator />
-            <CardContent className="pt-6">
+            <CardContent className="pt-6 pb-4">
               <Button
                 onClick={() => signIn('google')}
-                className="w-full"
+                className="w-full py-6 text-base font-medium"
                 size="lg"
               >
                 Iniciar con Google
               </Button>
             </CardContent>
-            <Separator />
-            <CardFooter className="flex flex-col text-center pt-4">
-              <p className="text-sm text-muted-foreground mb-3">
-                Si tienes problemas para iniciar sesión:
-              </p>
-              <Button
-                variant="outline"
-                asChild
-                size="sm"
-              >
-                <Link href="/auth-status">
-                  Diagnosticar Problemas de Autenticación
-                </Link>
-              </Button>
-            </CardFooter>
           </Card>
         )}
       </div>
