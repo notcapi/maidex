@@ -69,7 +69,7 @@ export function ChatInput({
           
           <form
             onSubmit={handleSubmit}
-            className="relative z-10 flex flex-col max-w-4xl mx-auto gap-2"
+            className="relative z-10 flex flex-col max-w-4xl mx-auto gap-2 w-full"
           >
             <div 
               ref={inputContainerRef}
@@ -79,10 +79,6 @@ export function ChatInput({
                 value.trim() ? "pr-16" : "pr-3"
               )}
             >
-              <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center pointer-events-none opacity-0">
-                <PlusIcon className="h-4 w-4 text-muted-foreground" />
-              </div>
-              
               <TextareaAutosize
                 ref={textareaRef}
                 value={value}
@@ -92,7 +88,11 @@ export function ChatInput({
                 onBlur={() => setIsFocused(false)}
                 placeholder={isLoading ? "Procesando..." : placeholder}
                 disabled={isLoading || disabled}
-                className="w-full resize-none bg-transparent py-3.5 pl-4 pr-2 outline-none min-h-[50px] text-foreground placeholder:text-muted-foreground/70"
+                className={cn(
+                  "w-full resize-none bg-transparent outline-none text-foreground placeholder:text-muted-foreground/70",
+                  "py-3.5 pl-4 pr-2 min-h-[50px]", // Base para móvil
+                  "md:py-4 md:pl-5 md:text-base md:min-h-[60px]" // Más grande en tablet/desktop
+                )}
                 maxRows={maxRows}
               />
               
@@ -103,7 +103,7 @@ export function ChatInput({
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.8 }}
                     transition={{ duration: 0.15 }}
-                    className="absolute right-3 bottom-2.5 flex items-center"
+                    className="absolute right-3 bottom-2.5 md:bottom-3 md:right-4 flex items-center"
                   >
                     <TooltipProvider>
                       <Tooltip>
@@ -112,10 +112,10 @@ export function ChatInput({
                             type="submit"
                             size="icon"
                             disabled={isLoading || disabled || !value.trim()}
-                            className="h-10 w-10 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-all shadow-md"
+                            className="h-10 w-10 md:h-12 md:w-12 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-all shadow-md"
                             aria-label="Enviar mensaje"
                           >
-                            <PaperPlaneIcon className="h-4 w-4" />
+                            <PaperPlaneIcon className="h-4 w-4 md:h-5 md:w-5" />
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent side="top">

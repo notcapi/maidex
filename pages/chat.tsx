@@ -609,9 +609,9 @@ export default function Chat() {
         <Separator />
         
         {/* Área de entrada */}
-        <div className="p-3 pb-5 bg-gradient-to-t from-background to-transparent flex-shrink-0">
-          <div className="relative z-10 max-w-3xl mx-auto">
-            <div className="flex items-center">
+        <div className="p-3 pb-5 md:p-4 md:pb-6 bg-gradient-to-t from-background to-transparent flex-shrink-0">
+          <div className="relative z-10 max-w-3xl mx-auto w-full">
+            <div className="flex items-center gap-2 md:gap-3">
               <div className="flex-1 relative">
                 <ChatInput
                   onSubmit={handleSendMessage}
@@ -621,7 +621,7 @@ export default function Chat() {
                   className="w-full"
                 />
               </div>
-              <div className="ml-2 flex items-center">
+              <div className="flex items-center">
                 <SpeechRecognition 
                   onTranscript={handleTranscript}
                   onListening={handleListening}
@@ -630,7 +630,7 @@ export default function Chat() {
             </div>
             
             {/* Desplegable de herramientas/acciones rápidas */}
-            <div className="w-full mt-2">
+            <div className="w-full mt-2 md:mt-3">
               <div className="flex flex-wrap gap-2 justify-center">
                 {examples.map((example) => (
                   <Button
@@ -638,7 +638,7 @@ export default function Chat() {
                     variant="outline"
                     size="sm"
                     onClick={() => handleExampleClick(example.text)}
-                    className="text-xs py-1.5 px-3 h-auto rounded-full bg-background/80 backdrop-blur-sm border border-border/40 
+                    className="text-xs py-1.5 px-3 h-auto md:text-sm md:py-2 md:px-4 rounded-full bg-background/80 backdrop-blur-sm border border-border/40 
                               hover:bg-background/90 transition-all shadow-sm flex items-center"
                   >
                     <span className="mr-1.5">{example.icon}</span>

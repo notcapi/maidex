@@ -30,7 +30,9 @@ export function SpeechRecognition({
   useEffect(() => {
     if (typeof window !== 'undefined') {
       try {
-        const SpeechRecognition = window.SpeechRecognition || 
+        // Comprobar soporte de navegador
+        const SpeechRecognition = 
+          window.SpeechRecognition || 
           (window as any).webkitSpeechRecognition;
         
         if (!SpeechRecognition) {
@@ -40,71 +42,68 @@ export function SpeechRecognition({
           return;
         }
 
-        // Crear instancia si no existe
-        if (!recognitionRef.current) {
-          const recognition = new SpeechRecognition();
-          recognition.continuous = true;
-          recognition.interimResults = true;
-          recognition.lang = 'es-ES';
+        recognitionRef.current = new SpeechRecognition();
+        const recognition = recognitionRef.current;
+        
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = 'es-ES';
+        
+        // Configurar eventos
+        recognition.onstart = () => {
+          console.log("Reconocimiento iniciado");
+          setIsListening(true);
+          if (onListening) onListening(true);
+          // Reiniciar transcripción acumulada
+          accumulatedTranscriptRef.current = "";
+        };
+        
+        recognition.onresult = (event: any) => {
+          console.log("Resultado recibido", event);
           
-          // Guardar referencia
-          recognitionRef.current = recognition;
+          let interimTranscript = '';
+          let finalTranscript = '';
           
-          // Configurar eventos
-          recognition.onstart = () => {
-            console.log("Reconocimiento iniciado");
-            setIsListening(true);
-            if (onListening) onListening(true);
-            // Reiniciar transcripción acumulada
-            accumulatedTranscriptRef.current = "";
-          };
-          
-          recognition.onresult = (event: any) => {
-            try {
-              console.log("Evento de resultado recibido", event);
-              
-              let finalTranscript = '';
-              let interimTranscript = '';
-              
-              // Procesar todos los resultados
-              for (let i = 0; i < event.results.length; i++) {
-                const transcriptPiece = event.results[i][0].transcript;
-                if (event.results[i].isFinal) {
-                  finalTranscript += transcriptPiece;
-                } else {
-                  interimTranscript += transcriptPiece;
-                }
-              }
-              
-              // Actualizar transcripción acumulada
-              if (finalTranscript) {
-                accumulatedTranscriptRef.current = finalTranscript;
-              } else if (interimTranscript) {
-                // Si no hay transcripción final, usamos la provisional
-                accumulatedTranscriptRef.current = interimTranscript;
-              }
-
-              console.log("Transcripción actual:", accumulatedTranscriptRef.current);
-            } catch (e) {
-              console.error("Error procesando resultados:", e);
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            const transcript = event.results[i][0].transcript;
+            if (event.results[i].isFinal) {
+              finalTranscript += transcript;
+            } else {
+              interimTranscript += transcript;
             }
-          };
-
-          recognition.onend = () => {
-            console.log("Reconocimiento finalizado");
-            
-            // NO enviar la transcripción aquí, solo actualizar estados
-            setIsListening(false);
-            if (onListening) onListening(false);
-          };
-
-          recognition.onerror = (event: any) => {
-            console.error('Error en reconocimiento de voz:', event.error);
-            setError(`Error: ${event.error}`);
-            setIsListening(false);
-            if (onListening) onListening(false);
-          };
-        }
+          }
+          
+          // Actualizar transcripción acumulada con resultados finales
+          if (finalTranscript) {
+            accumulatedTranscriptRef.current += finalTranscript;
+          }
+          
+          // Si hay resultado final, enviarlo al textarea
+          if (finalTranscript) {
+            console.log("Enviando transcripción final:", accumulatedTranscriptRef.current);
+            onTranscript(accumulatedTranscriptRef.current);
+          }
+        };
+        
+        recognition.onerror = (event: any) => {
+          console.error('Error en reconocimiento de voz:', event.error);
+          setError(`Error: ${event.error}`);
+          setIsListening(false);
+          if (onListening) onListening(false);
+        };
+        
+        recognition.onend = () => {
+          console.log("Reconocimiento finalizado");
+          setIsListening(false);
+          if (onListening) onListening(false);
+          
+          // Cuando termina, enviar la transcripción si hay algo y no se ha enviado ya
+          if (accumulatedTranscriptRef.current && !finalTranscript) {
+            console.log("Enviando transcripción final al terminar:", accumulatedTranscriptRef.current);
+            onTranscript(accumulatedTranscriptRef.current);
+          }
+        };
+        
       } catch (error) {
         console.error("Error inicializando reconocimiento de voz:", error);
         setIsSupported(false);
@@ -112,19 +111,19 @@ export function SpeechRecognition({
       }
     }
 
+    let finalTranscript = false;
+    
     return () => {
       // Limpiar al desmontar
-      if (recognitionRef.current) {
+      if (recognitionRef.current && isListening) {
         try {
-          if (isListening) {
-            recognitionRef.current.stop();
-          }
+          recognitionRef.current.stop();
         } catch (e) {
-          console.error("Error al abortar reconocimiento:", e);
+          console.error("Error al detener reconocimiento:", e);
         }
       }
     };
-  }, [onListening, onTranscript, isListening]);
+  }, [onListening, onTranscript]);
 
   // Manejar inicio/parada manual
   const toggleListening = useCallback(() => {
@@ -134,30 +133,18 @@ export function SpeechRecognition({
     }
     
     setError(null);
-    console.log("Cambiando estado de escucha actual:", isListening);
     
     try {
       if (isListening) {
         // Detener grabación
-        console.log("Intentando detener grabación...");
+        console.log("Deteniendo grabación...");
         recognitionRef.current.stop();
-        console.log("Grabación detenida manualmente");
-        
-        // Solo actualizamos el texto en el campo cuando se detiene manualmente
-        if (accumulatedTranscriptRef.current.trim()) {
-          const transcript = accumulatedTranscriptRef.current.trim();
-          console.log("Actualizando campo con transcripción:", transcript);
-          // Pequeño retraso para asegurar que el reconocimiento se ha detenido completamente
-          setTimeout(() => {
-            onTranscript(transcript);
-          }, 10);
-        }
       } else {
         // Iniciar grabación
-        console.log("Intentando iniciar grabación...");
+        console.log("Iniciando grabación...");
+        // Reiniciar el acumulador
+        accumulatedTranscriptRef.current = "";
         recognitionRef.current.start();
-        console.log("Grabación iniciada manualmente");
-        // El estado se actualizará en el evento onstart
       }
     } catch (err) {
       console.error("Error al cambiar estado de grabación:", err);
@@ -166,7 +153,7 @@ export function SpeechRecognition({
       setIsListening(false);
       if (onListening) onListening(false);
     }
-  }, [isListening, isSupported, onListening, onTranscript]);
+  }, [isListening, isSupported, onListening]);
 
   if (!isSupported) {
     return (
@@ -176,11 +163,21 @@ export function SpeechRecognition({
             <Button 
               variant="outline" 
               size="icon" 
-              type="button"
               disabled 
               className="h-10 w-10 rounded-full bg-secondary/30 backdrop-blur-sm text-muted-foreground min-w-[40px] flex-shrink-0"
             >
-              <MicIcon className="h-4 w-4 opacity-50" />
+              <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="2" 
+                className="h-4 w-4 opacity-50"
+              >
+                <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                <line x1="12" x2="12" y1="19" y2="22" />
+              </svg>
             </Button>
           </TooltipTrigger>
           <TooltipContent side="top">
@@ -202,7 +199,7 @@ export function SpeechRecognition({
               size="icon"
               variant="ghost"
               className={cn(
-                "rounded-full w-12 h-12 min-w-[48px] bg-background/40 border border-border/40 backdrop-blur-sm shadow-sm",
+                "rounded-full w-12 h-12 md:w-14 md:h-14 min-w-[48px] bg-background/40 border border-border/40 backdrop-blur-sm shadow-sm",
                 isListening 
                   ? "bg-primary/10 border-primary/30 text-primary" 
                   : "hover:bg-background/60 hover:text-primary"
@@ -214,7 +211,7 @@ export function SpeechRecognition({
                   initial={{ scale: 1 }}
                   animate={{ scale: [1, 1.1, 1] }}
                   transition={{ repeat: Infinity, duration: 1.5 }}
-                  className="relative w-5 h-5"
+                  className="relative w-5 h-5 md:w-6 md:h-6"
                 >
                   <svg 
                     xmlns="http://www.w3.org/2000/svg" 
@@ -237,7 +234,7 @@ export function SpeechRecognition({
                   fill="none" 
                   stroke="currentColor" 
                   strokeWidth="2" 
-                  className="w-5 h-5"
+                  className="w-5 h-5 md:w-6 md:h-6"
                 >
                   <rect x="9" y="2" width="6" height="12" rx="3" />
                   <path d="M5 10a7 7 0 0 0 14 0" />
@@ -259,25 +256,6 @@ export function SpeechRecognition({
         </div>
       )}
     </div>
-  );
-}
-
-function MicIcon(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      {...props}
-    >
-      <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
-      <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-      <line x1="12" x2="12" y1="19" y2="22" />
-    </svg>
   );
 }
 
