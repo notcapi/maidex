@@ -56,7 +56,7 @@ export default function Home() {
               <div className="space-y-3">
                 <Button 
                   onClick={() => router.push('/chat')}
-                  className="w-full py-6 text-base font-medium bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-slate-200 dark:text-slate-900"
+                  className="w-full py-6 text-base font-medium bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-slate-100"
                   size="lg"
                 >
                   Ir al Chat
@@ -65,7 +65,7 @@ export default function Home() {
                 <Button 
                   onClick={() => router.push('/dashboard')}
                   variant="outline"
-                  className="w-full py-5 text-base border-slate-300 dark:border-slate-700 text-slate-900 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+                  className="w-full py-5 text-base border-slate-300 text-slate-800 hover:bg-slate-100 hover:text-slate-700 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700 dark:hover:text-slate-100"
                 >
                   Ver Dashboard
                 </Button>
@@ -93,7 +93,7 @@ export default function Home() {
               </div>
               <Button
                 onClick={() => signIn('google')}
-                className="w-full py-6 text-base font-medium bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-slate-200 dark:text-slate-900"
+                className="w-full py-6 text-base font-medium bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-slate-100"
                 size="lg"
               >
                 Iniciar con Google
