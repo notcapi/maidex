@@ -7,7 +7,6 @@
     }
   ],
   "env": {
-    "NEXTAUTH_URL": "${VERCEL_URL}",
     "NODE_VERSION": "20.x"
   },
   "buildCommand": "npm run build",
