@@ -122,8 +122,14 @@ export default async function handler(
             result: driveResult
           };
           
-          if (driveOperation.operation === 'list' && driveResult.files) {
-            responseContent = `He encontrado ${driveResult.files.length} archivos en tu Drive.`;
+          if (driveOperation.operation === 'list') {
+            // Usar type assertion para evitar errores de tipo
+            const driveResultAny = driveResult as any;
+            if (driveResultAny.files && Array.isArray(driveResultAny.files)) {
+              responseContent = `He encontrado ${driveResultAny.files.length} archivos en tu Drive.`;
+            } else {
+              responseContent = `Operación de Drive "${driveOperation.operation}" completada con éxito.`;
+            }
           } else {
             responseContent = `Operación de Drive "${driveOperation.operation}" completada con éxito.`;
           }
@@ -156,7 +162,17 @@ export default async function handler(
         conversation_id: conversationId,
         created_at: new Date().toISOString(),
         action: action,
-        drive_files: action === 'gdrive_operations' && responseData.result?.files ? responseData.result.files : null
+        drive_files: action === 'gdrive_operations' ? 
+          (() => {
+            // Usar type assertion para evitar errores de tipo
+            const resultAny = responseData.result as any;
+            if (resultAny && resultAny.files && Array.isArray(resultAny.files)) {
+              return resultAny.files;
+            } else if (resultAny && resultAny.file) {
+              return [resultAny.file];
+            }
+            return null;
+          })() : null
       });
     }
     
