@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/router';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -526,130 +526,247 @@ export default function Chat() {
     ]);
   };
 
+  // Añadir esta función para conectar el botón de micrófono
+  const toggleListening = useCallback(() => {
+    // Simplemente invertimos el estado de isListening
+    const nextListeningState = !isListening;
+    setIsListening(nextListeningState);
+    
+    // Si debe empezar a escuchar, primero reiniciamos el texto acumulado
+    if (nextListeningState) {
+      // Iniciamos el reconocimiento de voz mediante el componente SpeechRecognition
+      const speechRecognition = 
+        window.SpeechRecognition || 
+        (window as any).webkitSpeechRecognition;
+      
+      if (!speechRecognition) {
+        toast({
+          title: "No soportado",
+          description: "Tu navegador no soporta reconocimiento de voz",
+          variant: "destructive",
+        });
+        setIsListening(false);
+        return;
+      }
+      
+      // Crear una instancia del reconocimiento de voz
+      const recognition = new speechRecognition();
+      recognition.lang = 'es-ES';
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      
+      // Usar el input actual como punto de partida para el texto acumulado
+      // para mantener lo reconocido anteriormente
+      let transcriptText = input || '';
+      
+      recognition.onresult = (event: any) => {
+        let interimTranscript = '';
+        let finalTranscript = '';
+        
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const transcript = event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            finalTranscript += transcript;
+          } else {
+            interimTranscript += transcript;
+          }
+        }
+        
+        // Actualizar transcripción acumulada
+        if (finalTranscript) {
+          // Si ya hay texto, añadir un espacio antes
+          if (transcriptText && !transcriptText.endsWith(' ')) {
+            transcriptText += ' ';
+          }
+          transcriptText += finalTranscript;
+          handleTranscript(transcriptText);
+        }
+      };
+      
+      recognition.onerror = (event: any) => {
+        console.error('Error en reconocimiento de voz:', event.error);
+        setIsListening(false);
+        toast({
+          title: "Error",
+          description: `Error en reconocimiento de voz: ${event.error}`,
+          variant: "destructive",
+        });
+      };
+      
+      recognition.onend = () => {
+        setIsListening(false);
+        // Si hay texto transcrito, enviarlo al textarea
+        if (transcriptText) {
+          handleTranscript(transcriptText);
+        }
+      };
+      
+      // Guardar referencia y comenzar
+      (window as any).currentRecognition = recognition;
+      recognition.start();
+    } else {
+      // Detener el reconocimiento si existe
+      if ((window as any).currentRecognition) {
+        try {
+          (window as any).currentRecognition.stop();
+          (window as any).currentRecognition = null;
+        } catch (e) {
+          console.error("Error al detener reconocimiento:", e);
+        }
+      }
+    }
+  }, [isListening, handleTranscript, input]);
+
   if (status === 'loading') {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-black"></div>
       </div>
     );
   }
 
   return (
-    <Card className="max-w-4xl mx-auto border shadow-md h-[calc(100vh-2rem)] flex flex-col">
-      <CardHeader className="bg-black text-white rounded-t-lg px-6 py-4 flex-shrink-0">
-        <div className="flex items-center justify-between">
+    <div className="h-screen w-full flex flex-col pb-safe relative">
+      {/* Fondo con patrón sutil */}
+      <div className="absolute inset-0 bg-grid-pattern opacity-5 pointer-events-none" />
+      
+      <header className="sticky top-0 z-50 bg-gradient-to-r from-black to-gray-800 text-white py-3 md:py-4 border-b border-border/30 shadow-lg">
+        <div className="max-w-4xl mx-auto px-3 md:px-6 flex items-center justify-between">
           <div>
-            <h1 className="text-lg font-semibold">Asistente Personal</h1>
-            <p className="text-sm text-gray-300">Puedo enviar correos, crear eventos y gestionar Drive</p>
+            <h1 className="text-lg font-semibold flex items-center">
+              <span className="bg-black rounded-full h-6 w-6 flex items-center justify-center mr-2 text-xs">AI</span>
+              Maidex
+            </h1>
+            <p className="text-xs md:text-sm text-gray-300">Asistente personal inteligente</p>
           </div>
           <Button 
             onClick={handleResetConversation}
             disabled={loading}
-            className="rounded-full bg-white text-black px-4 py-2 text-sm font-medium shadow hover:bg-gray-100 transition"
+            variant="outline"
+            size="sm"
+            className="bg-black hover:bg-black/80 text-white border-transparent rounded-full px-3 py-1.5 text-xs md:text-sm"
           >
-            Reiniciar conversación
+            Reiniciar
           </Button>
         </div>
-      </CardHeader>
+      </header>
       
-      <CardContent className="p-0 flex flex-col flex-1 overflow-hidden">
-        {/* Mensajes */}
-        <ChatWindow className="flex-1" isLoading={loading}>
-          {messages.map((message) => {
-            // Determinar si mostrar botón de descarga para este mensaje específico
-            // Solo mostrar botón de descarga para los mensajes con la operación 'get' o solicitudes explícitas
-            const isGetOperation = message.content.includes('He recuperado el archivo');
-            const isExplicitDownloadRequest = message.isUser && 
-              (message.content.toLowerCase().includes('descarga') || 
-               message.content.toLowerCase().includes('descargar') ||
-               message.content.toLowerCase().includes('bajar') ||
-               message.content.toLowerCase().includes('download'));
-            
-            // El mensaje anterior al actual pidió descarga
-            const index = messages.indexOf(message);
-            const prevMessageRequestedDownload = index > 0 && messages[index-1].isUser && 
-              (messages[index-1].content.toLowerCase().includes('descarga') || 
-               messages[index-1].content.toLowerCase().includes('descargar') ||
-               messages[index-1].content.toLowerCase().includes('bajar') || 
-               messages[index-1].content.toLowerCase().includes('download'));
-            
-            const shouldShowDownload = isGetOperation || isExplicitDownloadRequest || 
-                                     (!message.isUser && prevMessageRequestedDownload);
-            
-            return (
-              <React.Fragment key={message.id}>
-                <ChatBubble
-                  role={message.isUser ? "user" : "ai"}
-                  message={message.content}
-                  timestamp={message.timestamp}
-                  userName={message.isUser ? session?.user?.name || undefined : undefined}
-                  userImage={message.isUser ? session?.user?.image || undefined : undefined}
-                />
-                
-                {!message.isUser && message.driveFiles && message.driveFiles.length > 0 && (
-                  <div className="mt-2 mb-3 px-2">
-                    <DriveFileList 
-                      files={message.driveFiles.map(file => ({
-                        id: file.id,
-                        name: file.name,
-                        type: file.type || (file.mimeType === 'application/vnd.google-apps.folder' ? 'folder' as const : 'file' as const),
-                        extension: file.extension || file.name.split('.').pop() || '',
-                        downloadUrl: shouldShowDownload ? (file.downloadUrl || `/api/drive/download?fileId=${file.id}`) : undefined
-                      }))}
-                      title="Archivos"
-                      emptyMessage="No hay archivos para mostrar"
-                    />
-                  </div>
-                )}
-              </React.Fragment>
-            );
-          })}
-        </ChatWindow>
-        
-        <Separator />
-        
-        {/* Área de entrada */}
-        <div className="p-3 pb-5 md:p-4 md:pb-6 bg-gradient-to-t from-background to-transparent flex-shrink-0">
-          <div className="relative z-10 max-w-3xl mx-auto w-full">
-            <div className="flex items-center gap-2 md:gap-3">
-              <div className="flex-1 relative">
-                <ChatInput
-                  onSubmit={handleSendMessage}
-                  isLoading={loading}
-                  disabled={status !== 'authenticated'}
-                  placeholder={isListening ? "Escuchando..." : "Escribe un mensaje..."}
-                  className="w-full"
-                />
+      <main className="flex-1 overflow-hidden bg-gradient-to-b from-background/80 to-muted/30">
+        <div className="relative h-full max-w-4xl mx-auto pt-8 md:pt-10">
+          {/* Panel de chat */}
+          <ChatWindow className="h-[calc(100vh-11rem)] md:h-[calc(100vh-12rem)]" isLoading={loading} autoScroll={true}>
+            {messages.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full text-center p-6 opacity-70">
+                <div className="w-16 h-16 rounded-full bg-black/10 flex items-center justify-center mb-4">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-black">
+                    <circle cx="12" cy="12" r="10"/>
+                    <path d="M12 16v-4"/>
+                    <path d="M12 8h.01"/>
+                  </svg>
+                </div>
+                <h3 className="text-xl font-medium mb-2">¡Bienvenido a Maidex!</h3>
+                <p className="text-sm text-muted-foreground max-w-md">
+                  Tu asistente personal inteligente. Puedo ayudarte con correos, eventos de calendario y archivos en Drive. 
+                  ¡Pregúntame lo que necesites!
+                </p>
               </div>
-              <div className="flex items-center">
-                <SpeechRecognition 
-                  onTranscript={handleTranscript}
-                  onListening={handleListening}
-                />
+            ) : (
+              <div className="pt-6 pb-4">
+                {messages.map((message) => {
+                  // Determinar si mostrar botón de descarga para este mensaje específico
+                  const isGetOperation = message.content.includes('He recuperado el archivo');
+                  const isExplicitDownloadRequest = message.isUser && 
+                    (message.content.toLowerCase().includes('descarga') || 
+                     message.content.toLowerCase().includes('descargar') ||
+                     message.content.toLowerCase().includes('bajar') ||
+                     message.content.toLowerCase().includes('download'));
+                  
+                  // El mensaje anterior al actual pidió descarga
+                  const index = messages.indexOf(message);
+                  const prevMessageRequestedDownload = index > 0 && messages[index-1].isUser && 
+                    (messages[index-1].content.toLowerCase().includes('descarga') || 
+                     messages[index-1].content.toLowerCase().includes('descargar') ||
+                     messages[index-1].content.toLowerCase().includes('bajar') || 
+                     messages[index-1].content.toLowerCase().includes('download'));
+                  
+                  const shouldShowDownload = isGetOperation || isExplicitDownloadRequest || 
+                                           (!message.isUser && prevMessageRequestedDownload);
+                  
+                  return (
+                    <React.Fragment key={message.id}>
+                      <ChatBubble
+                        role={message.isUser ? "user" : "ai"}
+                        message={message.content}
+                        timestamp={message.timestamp}
+                        userName={message.isUser ? session?.user?.name || undefined : undefined}
+                        userImage={message.isUser ? session?.user?.image || undefined : undefined}
+                      />
+                      
+                      {!message.isUser && message.driveFiles && message.driveFiles.length > 0 && (
+                        <div className="mt-2 mb-3 px-2">
+                          <DriveFileList 
+                            files={message.driveFiles.map(file => ({
+                              id: file.id,
+                              name: file.name,
+                              type: file.type || (file.mimeType === 'application/vnd.google-apps.folder' ? 'folder' as const : 'file' as const),
+                              extension: file.extension || file.name.split('.').pop() || '',
+                              downloadUrl: shouldShowDownload ? (file.downloadUrl || `/api/drive/download?fileId=${file.id}`) : undefined
+                            }))}
+                            title="Archivos"
+                            emptyMessage="No hay archivos para mostrar"
+                          />
+                        </div>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
               </div>
-            </div>
-            
-            {/* Desplegable de herramientas/acciones rápidas */}
-            <div className="w-full mt-2 md:mt-3">
-              <div className="flex flex-wrap gap-2 justify-center">
-                {examples.map((example) => (
-                  <Button
-                    key={example.action}
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleExampleClick(example.text)}
-                    className="text-xs py-1.5 px-3 h-auto md:text-sm md:py-2 md:px-4 rounded-full bg-background/80 backdrop-blur-sm border border-border/40 
-                              hover:bg-background/90 transition-all shadow-sm flex items-center"
-                  >
-                    <span className="mr-1.5">{example.icon}</span>
-                    {example.text}
-                  </Button>
-                ))}
+            )}
+          </ChatWindow>
+          
+          {/* Área de entrada fija en la parte inferior */}
+          <div className="sticky bottom-0 inset-x-0 bg-background pt-2 pb-6 px-3 md:px-4 border-t border-border/30">
+            <div className="relative z-10 max-w-3xl mx-auto w-full">
+              {/* Degradado para efecto de desvanecimiento */}
+              <div className="absolute left-0 right-0 -top-20 h-20 bg-gradient-to-t from-background to-transparent pointer-events-none"></div>
+              
+              {/* Sugerencias scrollables */}
+              <div className="w-full mb-3 overflow-x-auto flex items-center gap-2 pb-2 no-scrollbar">
+                <div className="flex items-center gap-2 px-1">
+                  {examples.map((example) => (
+                    <Button
+                      key={example.action}
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleExampleClick(example.text)}
+                      className="text-xs py-1.5 px-3 h-auto rounded-full bg-background/80 border border-border/40 
+                                whitespace-nowrap hover:bg-black/5 transition-all shadow-sm flex items-center shrink-0"
+                    >
+                      <span className="mr-1.5">{example.icon}</span>
+                      {example.text}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-2 md:gap-3">
+                <div className="flex-1 relative">
+                  <ChatInput
+                    onSubmit={handleSendMessage}
+                    isLoading={loading}
+                    disabled={status !== 'authenticated'}
+                    placeholder={isListening ? "Escuchando..." : "Escribe un mensaje..."}
+                    className="w-full"
+                    onMicrophoneClick={toggleListening}
+                    isListening={isListening}
+                    initialValue={input}
+                  />
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </main>
+    </div>
   );
 } 

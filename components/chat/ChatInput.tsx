@@ -3,7 +3,7 @@ import TextareaAutosize from "react-textarea-autosize";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { PaperPlaneIcon, PlusIcon } from "@radix-ui/react-icons";
+import { PaperPlaneIcon, PlusIcon, Link1Icon, FileIcon, ImageIcon } from "@radix-ui/react-icons";
 import { MotionConfig, AnimatePresence, motion } from "framer-motion";
 
 interface ChatInputProps {
@@ -13,6 +13,9 @@ interface ChatInputProps {
   className?: string;
   maxRows?: number;
   disabled?: boolean;
+  onMicrophoneClick?: () => void;
+  isListening?: boolean;
+  initialValue?: string;
 }
 
 export function ChatInput({
@@ -22,12 +25,22 @@ export function ChatInput({
   className,
   maxRows = 6,
   disabled = false,
+  onMicrophoneClick,
+  isListening = false,
+  initialValue = "",
 }: ChatInputProps) {
-  const [value, setValue] = useState("");
+  const [value, setValue] = useState(initialValue);
   const [isFocused, setIsFocused] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const inputContainerRef = useRef<HTMLDivElement>(null);
   const [inputHeight, setInputHeight] = useState(0);
+  const [showActions, setShowActions] = useState(false);
+
+  useEffect(() => {
+    if (initialValue) {
+      setValue(initialValue);
+    }
+  }, [initialValue]);
 
   useEffect(() => {
     if (inputContainerRef.current) {
@@ -58,6 +71,17 @@ export function ChatInput({
     }
   };
 
+  const toggleActions = () => {
+    setShowActions(prev => !prev);
+  };
+
+  // Botones de acción rápida para mostrar en el menú 
+  const actionButtons = [
+    { icon: <Link1Icon className="h-4 w-4" />, label: "Enlazar Drive" },
+    { icon: <FileIcon className="h-4 w-4" />, label: "Buscar archivo" },
+    { icon: <ImageIcon className="h-4 w-4" />, label: "Imagen" },
+  ];
+
   return (
     <div className={cn(
       "relative z-10 mt-auto",
@@ -65,7 +89,7 @@ export function ChatInput({
     )}>
       <MotionConfig>
         <div className="relative w-full flex flex-col">
-          <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent pointer-events-none h-16 z-0" />
+          {/* Eliminamos el fondo con blur que causa problemas */}
           
           <form
             onSubmit={handleSubmit}
@@ -74,11 +98,30 @@ export function ChatInput({
             <div 
               ref={inputContainerRef}
               className={cn(
-                "relative flex flex-1 overflow-hidden rounded-3xl border bg-background/40 backdrop-blur-lg shadow-sm transition-all duration-200",
-                isFocused ? "border-primary ring-1 ring-primary/20" : "border-border/50",
-                value.trim() ? "pr-16" : "pr-3"
+                "relative flex flex-1 items-center overflow-hidden rounded-3xl border bg-background shadow-sm transition-all duration-200",
+                isFocused ? "border-primary ring-2 ring-primary/20" : "border-border/50",
+                value.trim() ? "pr-20" : "pr-20"  // Cambiado de pr-14 a pr-20 para dejar espacio al botón de micrófono
               )}
             >
+              {/* Efecto de resplandor cuando está enfocado */}
+              {isFocused && (
+                <div className="absolute inset-0 bg-primary/5 pointer-events-none" />
+              )}
+              
+              {/* Botón de acciones adicionales con animación mejorada */}
+              <button
+                type="button"
+                onClick={toggleActions}
+                className={cn(
+                  "absolute left-3 top-1/2 -translate-y-1/2 md:left-4 p-2 rounded-full transition-all duration-300",
+                  "text-muted-foreground/70 hover:text-foreground hover:bg-muted",
+                  showActions ? "text-primary bg-primary/10 rotate-45 scale-110" : "scale-100"
+                )}
+                aria-label="Mostrar acciones"
+              >
+                <PlusIcon className="h-4 w-4 md:h-5 md:w-5" />
+              </button>
+              
               <TextareaAutosize
                 ref={textareaRef}
                 value={value}
@@ -86,25 +129,61 @@ export function ChatInput({
                 onKeyDown={handleKeyDown}
                 onFocus={() => setIsFocused(true)}
                 onBlur={() => setIsFocused(false)}
-                placeholder={isLoading ? "Procesando..." : placeholder}
+                placeholder={isLoading ? "Procesando..." : isListening ? "Escuchando..." : placeholder}
                 disabled={isLoading || disabled}
                 className={cn(
                   "w-full resize-none bg-transparent outline-none text-foreground placeholder:text-muted-foreground/70",
-                  "py-3.5 pl-4 pr-2 min-h-[50px]", // Base para móvil
-                  "md:py-4 md:pl-5 md:text-base md:min-h-[60px]" // Más grande en tablet/desktop
+                  "py-3.5 pl-12 pr-12 min-h-[50px]", // Base para móvil
+                  "md:py-4 md:pl-14 md:pr-14 md:text-base md:min-h-[60px]" // Más grande en tablet/desktop
                 )}
                 maxRows={maxRows}
               />
               
-              <AnimatePresence>
-                {value.trim() && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.8 }}
-                    transition={{ duration: 0.15 }}
-                    className="absolute right-3 bottom-2.5 md:bottom-3 md:right-4 flex items-center"
-                  >
+              {/* Área para botones de acción */}
+              <div className="absolute right-3 md:right-4 flex items-center justify-center gap-2">
+                {/* Botón de micrófono */}
+                {onMicrophoneClick && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="ghost"
+                          onClick={onMicrophoneClick}
+                          className={cn(
+                            "h-9 w-9 md:h-10 md:w-10 rounded-full transition-all",
+                            isListening 
+                              ? "text-primary bg-primary/10 animate-pulse" 
+                              : "text-muted-foreground/70 hover:text-foreground hover:bg-muted"
+                          )}
+                          aria-label={isListening ? "Detener grabación" : "Iniciar grabación de voz"}
+                        >
+                          <svg 
+                            xmlns="http://www.w3.org/2000/svg" 
+                            viewBox="0 0 24 24" 
+                            fill="none" 
+                            stroke="currentColor" 
+                            strokeWidth="2" 
+                            className="h-4 w-4 md:h-5 md:w-5"
+                          >
+                            <rect x="9" y="2" width="6" height="12" rx="3" />
+                            <path d="M5 10a7 7 0 0 0 14 0" />
+                            <line x1="8" y1="19" x2="16" y2="19" />
+                            <line x1="12" y1="19" x2="12" y2="23" />
+                          </svg>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="top">
+                        {isListening ? "Detener grabación" : "Iniciar grabación de voz"}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
+
+                {/* Botón de enviar */}
+                <AnimatePresence>
+                  {value.trim() && (
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -112,7 +191,7 @@ export function ChatInput({
                             type="submit"
                             size="icon"
                             disabled={isLoading || disabled || !value.trim()}
-                            className="h-10 w-10 md:h-12 md:w-12 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-all shadow-md"
+                            className="h-10 w-10 md:h-11 md:w-11 rounded-full bg-black text-white hover:bg-black/80 transition-all shadow-lg"
                             aria-label="Enviar mensaje"
                           >
                             <PaperPlaneIcon className="h-4 w-4 md:h-5 md:w-5" />
@@ -123,10 +202,39 @@ export function ChatInput({
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                  )}
+                </AnimatePresence>
+              </div>
             </div>
+            
+            {/* Menú de acciones adicionales con mejor animación */}
+            <AnimatePresence>
+              {showActions && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0, y: -10 }}
+                  animate={{ opacity: 1, height: 'auto', y: 0 }}
+                  exit={{ opacity: 0, height: 0, y: -10 }}
+                  transition={{ duration: 0.2 }}
+                  className="absolute bottom-full left-4 mb-2 bg-card rounded-lg shadow-lg border border-border/50 overflow-hidden"
+                >
+                  <div className="p-1 flex flex-col">
+                    {actionButtons.map((button, index) => (
+                      <motion.button
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                        key={index}
+                        type="button"
+                        className="flex items-center gap-2 p-2 hover:bg-muted rounded text-sm text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        {button.icon}
+                        <span>{button.label}</span>
+                      </motion.button>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
             
             <div className="text-xs text-muted-foreground/60 text-center pb-1 opacity-80 hover:opacity-100 transition-opacity">
               <span className="select-none">Asistente con tecnología de Claude AI</span>
