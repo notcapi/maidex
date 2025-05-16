@@ -17,17 +17,17 @@ export default function Home() {
   const router = useRouter();
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-background dark:bg-slate-900">
+    <div className="min-h-screen flex items-center justify-center p-4 bg-background dark:bg-slate-950">
       <div className="max-w-[480px] w-full mx-auto">
         {session ? (
-          <Card className="border shadow-lg overflow-hidden bg-card text-card-foreground">
+          <Card className="border shadow-lg overflow-hidden bg-card dark:bg-slate-900 text-card-foreground">
             <CardHeader className="pb-2">
               <div className="flex items-center gap-3">
-                <div className="flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 dark:bg-slate-700 text-primary dark:text-slate-200">
+                <div className="flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 dark:bg-slate-800 text-primary dark:text-slate-300">
                   <PersonIcon className="w-6 h-6" />
                 </div>
                 <div>
-                  <CardTitle className="text-2xl text-foreground">¡Hola, {session.user?.name?.split(' ')[0] || 'usuario'}!</CardTitle>
+                  <CardTitle className="text-2xl text-foreground dark:text-slate-100">¡Hola, {session.user?.name?.split(' ')[0] || 'usuario'}!</CardTitle>
                   <CardDescription className="text-sm text-muted-foreground dark:text-slate-400">
                     {session.user?.email}
                   </CardDescription>
@@ -50,13 +50,13 @@ export default function Home() {
                     <li>Integración segura con tus cuentas de Google</li>
                   </ul>
                 </p>
-                <Separator className="my-4 bg-border" />
+                <Separator className="my-4 bg-border dark:bg-slate-700" />
               </div>
               
               <div className="space-y-3">
                 <Button 
                   onClick={() => router.push('/chat')}
-                  className="w-full py-6 text-base font-medium bg-black hover:bg-gray-800 dark:bg-slate-200 dark:hover:bg-slate-300 dark:text-black"
+                  className="w-full py-6 text-base font-medium bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-slate-200 dark:text-slate-900"
                   size="lg"
                 >
                   Ir al Chat
@@ -65,7 +65,7 @@ export default function Home() {
                 <Button 
                   onClick={() => router.push('/dashboard')}
                   variant="outline"
-                  className="w-full py-5 text-base border-black/20 dark:border-slate-600 text-foreground hover:bg-accent dark:hover:bg-slate-700 dark:text-slate-200"
+                  className="w-full py-5 text-base border-slate-300 dark:border-slate-700 text-slate-900 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
                 >
                   Ver Dashboard
                 </Button>
@@ -73,17 +73,17 @@ export default function Home() {
             </CardContent>
           </Card>
         ) : (
-          <Card className="border shadow-lg bg-card text-card-foreground">
+          <Card className="border shadow-lg bg-card dark:bg-slate-900 text-card-foreground">
             <CardHeader className="text-center">
-              <div className="mx-auto flex items-center justify-center w-14 h-14 rounded-full bg-primary/10 dark:bg-slate-700 text-primary dark:text-slate-200 mb-3">
+              <div className="mx-auto flex items-center justify-center w-14 h-14 rounded-full bg-primary/10 dark:bg-slate-800 text-primary dark:text-slate-300 mb-3">
                 <PersonIcon className="w-7 h-7" />
               </div>
-              <CardTitle className="text-2xl text-foreground">Bienvenido a Maidex</CardTitle>
+              <CardTitle className="text-2xl text-foreground dark:text-slate-100">Bienvenido a Maidex</CardTitle>
               <CardDescription className="text-base mt-2 text-muted-foreground dark:text-slate-400">
                 Tu asistente inteligente para Gmail y Calendar
               </CardDescription>
             </CardHeader>
-            <Separator className="bg-border" />
+            <Separator className="bg-border dark:bg-slate-700" />
             <CardContent className="pt-6 pb-6">
               <div className="mb-6">
                 <p className="text-muted-foreground dark:text-slate-300 text-sm text-center">
@@ -93,7 +93,7 @@ export default function Home() {
               </div>
               <Button
                 onClick={() => signIn('google')}
-                className="w-full py-6 text-base font-medium bg-black hover:bg-gray-800 dark:bg-slate-200 dark:hover:bg-slate-300 dark:text-black"
+                className="w-full py-6 text-base font-medium bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-slate-200 dark:text-slate-900"
                 size="lg"
               >
                 Iniciar con Google
