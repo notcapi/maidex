@@ -1,8 +1,17 @@
 import NextAuth, { NextAuthOptions } from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
 import type { JWT } from 'next-auth/jwt';
-import { GoogleTokens } from '@/types';
 import { refreshAccessToken } from '@/lib/auth/refresh-token';
+
+// Definir el tipo para los tokens de Google OAuth, en lugar de importarlo
+interface GoogleTokens {
+  access_token: string;
+  expires_in: number;
+  refresh_token?: string;
+  scope: string;
+  token_type: string;
+  id_token?: string;
+}
 
 // Definir el tipo augmentado para las sesiones de NextAuth
 declare module 'next-auth' {
@@ -115,13 +124,14 @@ export const authOptions: NextAuthOptions = {
       if (account && user) {
         console.log("Configurando nuevo token JWT");
         
+        // Asegurarnos de que devolvemos un objeto compatible con JWT, usando type assertion
         return {
+          ...token,
           accessToken: account.access_token,
           accessTokenExpires: Date.now() + (account.expires_in as number) * 1000,
           refreshToken: account.refresh_token,
-          picture: user.image,
-          ...token
-        };
+          picture: user.image
+        } as JWT;
       }
 
       // Devolver el token previo si el token de acceso aún es válido
@@ -135,7 +145,8 @@ export const authOptions: NextAuthOptions = {
       const refreshedToken = await refreshAccessToken(token);
       console.log("Token refrescado exitosamente");
       
-      return refreshedToken;
+      // Asegurarnos de que es un objeto JWT válido
+      return refreshedToken as JWT;
     },
     async session({ session, token }) {
       // Pasar el token y la información del usuario a la sesión del cliente
