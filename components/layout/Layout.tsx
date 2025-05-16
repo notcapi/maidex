@@ -1,7 +1,7 @@
 import React, { ReactNode } from 'react';
 import { MainNav } from './MainNav';
 import { Toaster } from "@/components/ui/toaster";
-import { Navigation } from "@/components/ui/navigation";
+import { MainMenu } from "@/components/ui/navigation";
 
 interface LayoutProps {
   children: ReactNode;
@@ -10,7 +10,7 @@ interface LayoutProps {
 export function Layout({ children }: LayoutProps) {
   return (
     <div className="min-h-screen bg-background dark:bg-slate-950 flex flex-col">
-      <Navigation />
+      <MainMenu />
       <main className="flex-1">
         {children}
       </main>
