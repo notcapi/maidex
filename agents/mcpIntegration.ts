@@ -370,7 +370,7 @@ Asistente: [LLAMADA A create_event]`;
             return {
               success: true,
               params: emailParams,
-              messageId: emailResult?.messageId || 'unknown-id',
+              messageId: emailResult?.messageId ?? undefined,
               message: 'Correo enviado correctamente'
             };
           } catch (error) {
@@ -396,7 +396,7 @@ Asistente: [LLAMADA A create_event]`;
             return {
               success: true,
               params: eventParams,
-              eventId: calendarResult?.eventId || 'unknown-id',
+              eventId: calendarResult?.eventId ?? undefined,
               message: 'Evento creado correctamente'
             };
           } catch (error) {
@@ -421,7 +421,7 @@ Asistente: [LLAMADA A create_event]`;
             return {
               success: emailResult.success,
               params: toolInput,
-              messageId: emailResult.messageId,
+              messageId: emailResult.messageId ?? undefined,
               error: emailResult.error,
               message: 'Correo enviado correctamente'
             };
@@ -437,7 +437,7 @@ Asistente: [LLAMADA A create_event]`;
             return {
               success: calendarResult.success,
               params: toolInput,
-              eventId: calendarResult.eventId,
+              eventId: calendarResult.eventId ?? undefined,
               error: calendarResult.error,
               message: 'Evento creado correctamente'
             };
