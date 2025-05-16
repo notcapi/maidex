@@ -22,6 +22,7 @@ declare module "next-auth/jwt" {
 }
 
 // Obtener la URL base desde la variable de entorno o usar un valor predeterminado
+// Es importante que en producción esto tenga tu dominio real de Vercel
 const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
 
 // Función para refrescar el token
@@ -77,7 +78,6 @@ export const authOptions: NextAuthOptions = {
           scope: 'openid email profile https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/drive.file',
           // Forzar pantalla de consentimiento
           prompt: "consent",
-          // No especificar la URL de redirección aquí, usar la configurada en Google Cloud
           // Acceso sin conexión para obtener refresh token
           access_type: 'offline'
         },
@@ -99,7 +99,7 @@ export const authOptions: NextAuthOptions = {
 
       // Si el token no ha expirado, devuélvelo
       if (token.expiresAt && Date.now() < token.expiresAt * 1000) {
-      return token;
+        return token;
       }
 
       // Si el token ha expirado, intenta refrescarlo
@@ -123,21 +123,28 @@ export const authOptions: NextAuthOptions = {
       console.log('Usuario cerró sesión:', message);
     },
   },
-  // Configuración de seguridad
+  // Configuración de seguridad y cookies
   useSecureCookies: process.env.NODE_ENV === "production", // Solo usar cookies seguras en producción
   cookies: {
     sessionToken: {
       name: `next-auth.session-token`,
       options: {
         httpOnly: true,
-        sameSite: "lax",
+        sameSite: "lax", // Esto es importante para CORS
         path: "/",
         secure: process.env.NODE_ENV === "production",
       },
     },
   },
-  secret: process.env.NEXTAUTH_SECRET || 'maidex_secret_key_123',
-  debug: process.env.NODE_ENV !== "production", // Solo habilitar logs en desarrollo
+  // Asegúrate de que el secreto sea fuerte y consistente en todos los entornos
+  secret: process.env.NEXTAUTH_SECRET,
+  // Habilita los logs de depuración en desarrollo pero no en producción
+  debug: process.env.NODE_ENV !== "production",
+  // Tiempo de sesión (aumentado para evitar desconexiones frecuentes)
+  session: {
+    strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 días
+  }
 };
 
 export default NextAuth(authOptions); 
