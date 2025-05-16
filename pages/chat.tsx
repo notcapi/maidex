@@ -535,8 +535,8 @@ export default function Chat() {
   }
 
   return (
-    <Card className="max-w-4xl mx-auto border shadow-md">
-      <CardHeader className="bg-black text-white rounded-t-lg px-6 py-4">
+    <Card className="max-w-4xl mx-auto border shadow-md h-[calc(100vh-2rem)] flex flex-col">
+      <CardHeader className="bg-black text-white rounded-t-lg px-6 py-4 flex-shrink-0">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-lg font-semibold">Asistente Personal</h1>
@@ -552,7 +552,7 @@ export default function Chat() {
         </div>
       </CardHeader>
       
-      <CardContent className="p-0 flex flex-col h-[calc(100vh-200px)]">
+      <CardContent className="p-0 flex flex-col flex-1 overflow-hidden">
         {/* Mensajes */}
         <ChatWindow className="flex-1" isLoading={loading}>
           {messages.map((message) => {
@@ -609,8 +609,8 @@ export default function Chat() {
         <Separator />
         
         {/* Área de entrada */}
-        <div className="p-2 pb-4 bg-gradient-to-t from-background to-transparent">
-          <div className="relative z-10">
+        <div className="p-3 pb-5 bg-gradient-to-t from-background to-transparent flex-shrink-0">
+          <div className="relative z-10 max-w-3xl mx-auto">
             <div className="flex items-center">
               <div className="flex-1 relative">
                 <ChatInput
@@ -631,17 +631,17 @@ export default function Chat() {
             
             {/* Desplegable de herramientas/acciones rápidas */}
             <div className="w-full mt-2">
-              <div className="flex flex-wrap gap-1.5 justify-center">
+              <div className="flex flex-wrap gap-2 justify-center">
                 {examples.map((example) => (
                   <Button
                     key={example.action}
                     variant="outline"
                     size="sm"
                     onClick={() => handleExampleClick(example.text)}
-                    className="text-xs py-1 px-2 h-auto rounded-full bg-background/50 backdrop-blur-sm border border-border/30 
-                              hover:bg-background/80 transition-all shadow-sm flex items-center"
+                    className="text-xs py-1.5 px-3 h-auto rounded-full bg-background/80 backdrop-blur-sm border border-border/40 
+                              hover:bg-background/90 transition-all shadow-sm flex items-center"
                   >
-                    <span className="mr-1">{example.icon}</span>
+                    <span className="mr-1.5">{example.icon}</span>
                     {example.text}
                   </Button>
                 ))}

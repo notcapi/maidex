@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { AnimatePresence, motion } from "framer-motion";
+import { cn } from "@/lib/utils";
 
 interface SpeechRecognitionProps {
   onTranscript: (text: string) => void;
@@ -196,39 +197,67 @@ export function SpeechRecognition({
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
-              variant="outline"
+              onClick={toggleListening}
+              disabled={!isSupported}
               size="icon"
-              type="button"
-              onClick={(e) => {
-                e.preventDefault(); // Prevenir cualquier comportamiento predeterminado
-                toggleListening();
-              }}
-              className={isListening 
-                ? "h-10 w-10 rounded-full bg-red-500 text-white hover:bg-red-600 border-none shadow-md min-w-[40px] flex-shrink-0" 
-                : "h-10 w-10 rounded-full bg-background/30 backdrop-blur-sm hover:bg-background/80 border-border/50 shadow-sm min-w-[40px] flex-shrink-0"}
+              variant="ghost"
+              className={cn(
+                "rounded-full w-12 h-12 min-w-[48px] bg-background/40 border border-border/40 backdrop-blur-sm shadow-sm",
+                isListening 
+                  ? "bg-primary/10 border-primary/30 text-primary" 
+                  : "hover:bg-background/60 hover:text-primary"
+              )}
+              aria-label={isListening ? "Detener reconocimiento de voz" : "Iniciar reconocimiento de voz"}
             >
-              <MicIcon className="h-4 w-4" />
+              {isListening ? (
+                <motion.div 
+                  initial={{ scale: 1 }}
+                  animate={{ scale: [1, 1.1, 1] }}
+                  transition={{ repeat: Infinity, duration: 1.5 }}
+                  className="relative w-5 h-5"
+                >
+                  <svg 
+                    xmlns="http://www.w3.org/2000/svg" 
+                    viewBox="0 0 24 24" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    strokeWidth="2" 
+                    className="absolute inset-0 text-primary animate-pulse"
+                  >
+                    <rect x="9" y="2" width="6" height="12" rx="3" />
+                    <path d="M5 10a7 7 0 0 0 14 0" />
+                    <line x1="8" y1="19" x2="16" y2="19" />
+                    <line x1="12" y1="19" x2="12" y2="23" />
+                  </svg>
+                </motion.div>
+              ) : (
+                <svg 
+                  xmlns="http://www.w3.org/2000/svg" 
+                  viewBox="0 0 24 24" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  strokeWidth="2" 
+                  className="w-5 h-5"
+                >
+                  <rect x="9" y="2" width="6" height="12" rx="3" />
+                  <path d="M5 10a7 7 0 0 0 14 0" />
+                  <line x1="8" y1="19" x2="16" y2="19" />
+                  <line x1="12" y1="19" x2="12" y2="23" />
+                </svg>
+              )}
             </Button>
           </TooltipTrigger>
           <TooltipContent side="top">
-            <p>{isListening ? "Detener grabación" : "Grabar voz"}</p>
+            {isListening ? "Detener grabación" : "Iniciar grabación de voz"}
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
       
-      <AnimatePresence>
-        {isListening && (
-          <motion.div 
-            initial={{ opacity: 0, scale: 0 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0 }}
-            className="absolute top-0 right-0 h-3 w-3"
-          >
-            <span className="absolute top-0 right-0 h-3 w-3 rounded-full bg-red-500 animate-ping" />
-            <span className="absolute top-0 right-0 h-3 w-3 rounded-full bg-red-500" />
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {error && (
+        <div className="text-xs text-red-500 mt-1 text-center">
+          {error}
+        </div>
+      )}
     </div>
   );
 }

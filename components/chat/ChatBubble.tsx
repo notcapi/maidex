@@ -37,15 +37,15 @@ export function ChatBubble({
         initial={{ opacity: 0, y: 5 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.2 }}
-        className="flex items-start space-x-4 px-6 py-4 bg-white dark:bg-gray-800 rounded-b-lg"
+        className="flex items-start space-x-3 px-4 py-3 bg-white dark:bg-gray-800"
       >
-        <div className="w-8 h-8 flex items-center justify-center bg-gray-900 text-white rounded-full font-bold">
+        <div className="w-9 h-9 flex items-center justify-center bg-gray-900 text-white rounded-full font-bold shrink-0">
           AI
         </div>
         
-        <div className="flex flex-col max-w-[70%]">
-          <div className="bg-gray-100 dark:bg-gray-700 rounded-xl px-4 py-2 relative shadow-sm">
-            <div className="text-base leading-relaxed text-gray-900 dark:text-gray-100 whitespace-pre-wrap break-words">
+        <div className="flex flex-col max-w-[85%] w-full">
+          <div className="bg-gray-100 dark:bg-gray-700 rounded-xl px-4 py-3 relative shadow-sm">
+            <div className="text-base leading-relaxed text-gray-800 dark:text-gray-100 whitespace-pre-wrap break-words">
               {message}
             </div>
           </div>
@@ -57,7 +57,7 @@ export function ChatBubble({
                 <div
                   key={file.id}
                   className={cn(
-                    "flex items-center text-xs rounded-lg p-2 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                    "flex items-center text-xs rounded-lg p-3 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                   )}
                 >
                   <FileIcon mimeType={file.mimeType} />
@@ -68,7 +68,7 @@ export function ChatBubble({
                       href={`/api/drive/download?fileId=${file.id}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="ml-auto flex items-center p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600"
+                      className="ml-auto flex items-center p-1.5 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600"
                     >
                       <DownloadIcon />
                     </a>
@@ -80,7 +80,7 @@ export function ChatBubble({
           
           {/* Timestamp */}
           {timestamp && (
-            <time className="block mt-1 text-xs text-gray-500 dark:text-gray-400 text-right">
+            <time className="block mt-1 text-xs text-gray-500 dark:text-gray-400 text-right mr-1">
               {timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
             </time>
           )}
@@ -89,20 +89,20 @@ export function ChatBubble({
     );
   }
   
-  // Mantener el diseño original para las burbujas del usuario
+  // Mejorar diseño para las burbujas del usuario
   return (
     <div
       className={cn(
-        "flex w-full max-w-full mb-4",
+        "flex w-full max-w-full mb-3 px-3",
         "justify-end"
       )}
     >
-      <div className="flex flex-col max-w-[80%]">
+      <div className="flex flex-col max-w-[85%]">
         <div
           className={cn(
             "p-3 rounded-2xl flex-1 whitespace-pre-wrap break-words",
             "bg-primary text-primary-foreground rounded-br-none",
-            "animate-fade-in transition-all"
+            "animate-fade-in transition-all shadow-sm"
           )}
         >
           {message}
@@ -114,7 +114,7 @@ export function ChatBubble({
             {files.map((file) => (
               <div
                 key={file.id}
-                className="flex items-center text-xs rounded-lg p-2 bg-primary/80 text-primary-foreground"
+                className="flex items-center text-xs rounded-lg p-3 bg-primary/80 text-primary-foreground"
               >
                 <FileIcon mimeType={file.mimeType} />
                 <span className="ml-2 truncate max-w-[180px]">{file.name}</span>
@@ -124,7 +124,7 @@ export function ChatBubble({
                     href={`/api/drive/download?fileId=${file.id}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="ml-auto flex items-center p-1 rounded-full hover:bg-primary-foreground/10"
+                    className="ml-auto flex items-center p-1.5 rounded-full hover:bg-primary-foreground/10"
                   >
                     <DownloadIcon />
                   </a>
@@ -142,7 +142,7 @@ export function ChatBubble({
         )}
       </div>
 
-      <Avatar className="h-8 w-8 ml-2 shrink-0">
+      <Avatar className="h-9 w-9 ml-2 shrink-0">
         <AvatarImage src={userImage} />
         <AvatarFallback>{initial}</AvatarFallback>
       </Avatar>

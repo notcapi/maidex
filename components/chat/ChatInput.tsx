@@ -69,12 +69,12 @@ export function ChatInput({
           
           <form
             onSubmit={handleSubmit}
-            className="relative z-10 container flex flex-col max-w-4xl mx-auto gap-3"
+            className="relative z-10 flex flex-col max-w-4xl mx-auto gap-2"
           >
             <div 
               ref={inputContainerRef}
               className={cn(
-                "relative flex flex-1 overflow-hidden rounded-2xl border bg-background/30 backdrop-blur-lg shadow-sm transition-all duration-200",
+                "relative flex flex-1 overflow-hidden rounded-3xl border bg-background/40 backdrop-blur-lg shadow-sm transition-all duration-200",
                 isFocused ? "border-primary ring-1 ring-primary/20" : "border-border/50",
                 value.trim() ? "pr-16" : "pr-3"
               )}
@@ -92,7 +92,7 @@ export function ChatInput({
                 onBlur={() => setIsFocused(false)}
                 placeholder={isLoading ? "Procesando..." : placeholder}
                 disabled={isLoading || disabled}
-                className="w-full resize-none bg-transparent py-3 pl-4 pr-2 outline-none min-h-[56px] text-foreground placeholder:text-muted-foreground/70"
+                className="w-full resize-none bg-transparent py-3.5 pl-4 pr-2 outline-none min-h-[50px] text-foreground placeholder:text-muted-foreground/70"
                 maxRows={maxRows}
               />
               
@@ -103,7 +103,7 @@ export function ChatInput({
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.8 }}
                     transition={{ duration: 0.15 }}
-                    className="absolute right-3 bottom-2 flex items-center"
+                    className="absolute right-3 bottom-2.5 flex items-center"
                   >
                     <TooltipProvider>
                       <Tooltip>
