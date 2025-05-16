@@ -199,65 +199,88 @@ export const ChatInput = React.memo(function ChatInputInner({
                     </Tooltip>
                   </TooltipProvider>
                 )}
-
+                
                 {/* Botón de enviar */}
-                <AnimatePresence>
-                  {value.trim() && (
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            type="submit"
-                            size="icon"
-                            disabled={isLoading || disabled || !value.trim()}
-                            className="h-10 w-10 md:h-11 md:w-11 rounded-full bg-black text-white hover:bg-black/80 transition-all shadow-lg"
-                            aria-label="Enviar mensaje"
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        type="submit"
+                        size="icon"
+                        disabled={!value.trim() || isLoading || disabled}
+                        className={cn(
+                          "h-9 w-9 md:h-10 md:w-10 rounded-full transition-all",
+                          "bg-primary text-primary-foreground hover:bg-primary/90",
+                          "disabled:bg-muted disabled:text-muted-foreground/70"
+                        )}
+                        aria-label="Enviar mensaje"
+                      >
+                        {isLoading ? (
+                          <motion.div
+                            className="animate-spin"
+                            animate={{ rotate: 360 }}
+                            transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
                           >
-                            <PaperPlaneIcon className="h-4 w-4 md:h-5 md:w-5" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent side="top">
-                          <p>Enviar mensaje</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  )}
-                </AnimatePresence>
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              className="h-4 w-4"
+                            >
+                              <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                            </svg>
+                          </motion.div>
+                        ) : (
+                          <PaperPlaneIcon className="h-4 w-4 md:h-5 md:w-5 translate-x-[1px] translate-y-[-1px]" />
+                        )}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">Enviar mensaje</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
             </div>
             
-            {/* Menú de acciones adicionales con mejor animación */}
+            {/* Panel de acciones extras */}
             <AnimatePresence>
               {showActions && (
                 <motion.div
-                  initial={{ opacity: 0, height: 0, y: -10 }}
+                  initial={{ opacity: 0, height: 0, y: -5 }}
                   animate={{ opacity: 1, height: 'auto', y: 0 }}
-                  exit={{ opacity: 0, height: 0, y: -10 }}
+                  exit={{ opacity: 0, height: 0, y: -5 }}
                   transition={{ duration: 0.2 }}
-                  className="absolute bottom-full left-4 mb-2 bg-card rounded-lg shadow-lg border border-border/50 overflow-hidden"
+                  className="flex items-center gap-2 px-2 overflow-hidden"
                 >
-                  <div className="p-1 flex flex-col">
-                    {actionButtons.map((button, index) => (
-                      <motion.button
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: index * 0.05 }}
-                        key={index}
-                        type="button"
-                        className="flex items-center gap-2 p-2 hover:bg-muted rounded text-sm text-muted-foreground hover:text-foreground transition-colors"
-                      >
-                        {button.icon}
-                        <span>{button.label}</span>
-                      </motion.button>
-                    ))}
+                  <div className="flex overflow-x-auto w-full py-1 scrollbar-hide">
+                    <div className="flex gap-2 px-2">
+                      {actionButtons.map((button, index) => (
+                        <TooltipProvider key={index}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                className="h-9 rounded-full border-border/40 px-3 py-2 text-sm text-muted-foreground"
+                                onClick={() => {}}
+                                disabled={isLoading || disabled}
+                              >
+                                {button.icon}
+                                <span className="ml-1">{button.label}</span>
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>{button.label}</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      ))}
+                    </div>
                   </div>
                 </motion.div>
               )}
             </AnimatePresence>
-            
-            <div className="text-xs text-muted-foreground/60 text-center pb-1 opacity-80 hover:opacity-100 transition-opacity">
-              <span className="select-none">Asistente con tecnología de Claude AI</span>
-            </div>
           </form>
         </div>
       </MotionConfig>

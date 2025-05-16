@@ -10,6 +10,9 @@ type File = {
   id: string;
   name: string;
   mimeType: string;
+  type?: "file" | "folder";
+  extension?: string;
+  downloadUrl?: string;
 };
 
 interface ChatBubbleProps {
@@ -83,7 +86,7 @@ export function ChatBubble({
                   <FileIcon mimeType={file.mimeType} />
                   <span className="ml-2 truncate max-w-[180px] md:max-w-[300px]">{file.name}</span>
                   
-                  {showDownload && (
+                  {showDownload && file.type === 'file' && (
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -94,7 +97,7 @@ export function ChatBubble({
                             asChild
                           >
                             <a
-                              href={`/api/drive/download?fileId=${file.id}`}
+                              href={file.downloadUrl || `/api/drive/download?fileId=${file.id}`}
                               target="_blank"
                               rel="noopener noreferrer"
                               aria-label="Descargar archivo"
@@ -156,7 +159,7 @@ export function ChatBubble({
                 <FileIcon mimeType={file.mimeType} />
                 <span className="ml-2 truncate max-w-[180px] md:max-w-[300px]">{file.name}</span>
                 
-                {showDownload && (
+                {showDownload && file.type === 'file' && (
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -167,7 +170,7 @@ export function ChatBubble({
                           asChild
                         >
                           <a
-                            href={`/api/drive/download?fileId=${file.id}`}
+                            href={file.downloadUrl || `/api/drive/download?fileId=${file.id}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             aria-label="Descargar archivo"
@@ -226,6 +229,10 @@ function FileIcon({ mimeType }: { mimeType: string }) {
         <>
           <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
           <polyline points="14 2 14 8 20 8" />
+        </>
+      ) : mimeType.includes("folder") ? (
+        <>
+          <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z" />
         </>
       ) : (
         <>

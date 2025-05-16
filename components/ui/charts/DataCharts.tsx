@@ -249,307 +249,251 @@ const DataCharts: React.FC<DataChartsProps> = ({ emails, events, type }) => {
     }
 
     try {
-      // Verificar si los eventos tienen fechas válidas
-      const hasValidDates = events.every(event => {
-        try {
-          const start = new Date(event.start.dateTime);
-          const end = new Date(event.end.dateTime);
-          return !isNaN(start.getTime()) && !isNaN(end.getTime());
-        } catch (e) {
-          return false;
-        }
-      });
-
-      if (!hasValidDates) {
-        console.error('Algunos eventos tienen fechas inválidas');
-        setChartError('Algunos eventos tienen fechas inválidas');
-        drawEventTable(); // Mostrar tabla como alternativa
-        return;
-      }
-
-      // Crear línea de tiempo de eventos
+      // Crear un cronograma de eventos
       const dataTable = new window.google.visualization.DataTable();
       dataTable.addColumn({ type: 'string', id: 'Evento' });
       dataTable.addColumn({ type: 'date', id: 'Inicio' });
       dataTable.addColumn({ type: 'date', id: 'Fin' });
 
-      const timelineData = events.map(event => {
-        let start, end;
-        try {
-          start = new Date(event.start.dateTime);
-          end = new Date(event.end.dateTime);
-          
-          // Si las fechas son iguales, añadir una hora al final para visualización
-          if (start.getTime() === end.getTime()) {
-            end = new Date(start.getTime() + 3600000); // +1 hora
-          }
-        } catch (e) {
-          console.error('Error al convertir fechas:', e);
-          start = new Date();
-          end = new Date(start.getTime() + 3600000);
-        }
-        
-        return [
-          event.summary || 'Evento sin título',
-          start,
-          end
-        ];
+      // Añadir filas de eventos
+      events.forEach(event => {
+        const startTime = new Date(event.start.dateTime);
+        const endTime = new Date(event.end.dateTime);
+        dataTable.addRow([event.summary, startTime, endTime]);
       });
 
-      dataTable.addRows(timelineData);
+      const textColor = isDarkMode ? 'hsl(var(--foreground))' : 'hsl(var(--foreground))';
       
-      const textColor = isDarkMode ? '#ffffff' : '#333333';
       const options = {
-        timeline: { 
+        title: 'Cronograma de Eventos',
+        titleTextStyle: {
+          color: textColor,
+          fontSize: 16,
+          bold: true
+        },
+        backgroundColor: { 
+          fill: isDarkMode ? 'hsl(var(--card))' : 'hsl(var(--card))',
+          stroke: isDarkMode ? 'hsl(var(--border))' : 'hsl(var(--border))',
+          strokeWidth: 1
+        },
+        colors: [chartColors[0]],
+        timeline: {
           showRowLabels: true,
-          rowLabelStyle: { 
-            fontName: 'Arial', 
-            fontSize: 14,
-            color: textColor,
-            bold: true
+          rowLabelStyle: {
+            fontSize: 12,
+            color: textColor
           },
           barLabelStyle: { 
-            fontName: 'Arial', 
-            fontSize: 12,
-            color: textColor 
+            fontSize: 10 
           }
         },
-        backgroundColor: isDarkMode ? '#1f1f1f' : '#ffffff',
-        alternatingRowStyle: false,
-        colors: chartColors,
         avoidOverlappingGridLines: false
       };
 
-      const chart = new window.google.visualization.Timeline(chartRef.current);
+      // Limpiar el contenedor antes de renderizar
+      while (chartRef.current.firstChild) {
+        chartRef.current.removeChild(chartRef.current.firstChild);
+      }
+
+      // Crear el div para el cronograma
+      const timelineDiv = document.createElement('div');
+      timelineDiv.style.width = '100%';
+      timelineDiv.style.height = '250px';
+      timelineDiv.style.marginBottom = '2rem';
+      chartRef.current.appendChild(timelineDiv);
       
-      window.google.visualization.events.addListener(chart, 'error', function(error: any) {
-        console.error('Error en la visualización de Timeline:', error);
-        setChartError('No se puede mostrar el cronograma con los datos actuales');
-        
-        // Como alternativa, mostrar una tabla con los eventos
-        drawEventTable();
-      });
+      const timeline = new window.google.visualization.Timeline(timelineDiv);
+      timeline.draw(dataTable, options);
       
-      chart.draw(dataTable, options);
-    } catch (error) {
-      console.error('Error al dibujar el cronograma:', error);
-      setChartError('Error al generar el cronograma');
-      
-      // Como plan de respaldo, mostrar una tabla simple
+      // Crear gráfico de tabla para detalles
       drawEventTable();
+
+    } catch (error) {
+      console.error('Error en drawEventCharts:', error);
+      setChartError('No se pudo generar el cronograma de eventos');
     }
   };
-  
-  // Función para mostrar eventos en formato de tabla cuando el Timeline falla
+
   const drawEventTable = () => {
-    if (!events || !chartRef.current || events.length === 0) return;
+    if (!events || !chartRef.current || !window.google || !window.google.visualization) return;
     
     try {
+      // Crear una tabla de datos para eventos
       const dataTable = new window.google.visualization.DataTable();
-      dataTable.addColumn('string', 'Evento');
-      dataTable.addColumn('string', 'Fecha y Hora');
+      dataTable.addColumn('string', 'Título');
+      dataTable.addColumn('string', 'Inicio');
+      dataTable.addColumn('string', 'Fin');
       dataTable.addColumn('string', 'Duración');
       
-      const tableData = events.map(event => {
-        let start, end, duration;
-        try {
-          start = new Date(event.start.dateTime);
-          end = new Date(event.end.dateTime);
-          duration = Math.round((end.getTime() - start.getTime()) / (1000 * 60)); // duración en minutos
-        } catch (e) {
-          console.error('Error al procesar fechas para tabla:', e);
-          start = new Date();
-          end = new Date();
-          duration = 0;
+      events.forEach(event => {
+        const start = new Date(event.start.dateTime);
+        const end = new Date(event.end.dateTime);
+        
+        // Formatear fechas
+        const startStr = start.toLocaleString('es-ES', {
+          day: '2-digit',
+          month: 'short',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+        
+        const endStr = end.toLocaleString('es-ES', {
+          day: '2-digit',
+          month: 'short',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+        
+        // Calcular duración en minutos
+        const durationMs = end.getTime() - start.getTime();
+        const durationMin = Math.round(durationMs / 60000);
+        let durationStr = '';
+        
+        if (durationMin < 60) {
+          durationStr = `${durationMin} minutos`;
+        } else {
+          const hours = Math.floor(durationMin / 60);
+          const mins = durationMin % 60;
+          durationStr = `${hours} hora${hours > 1 ? 's' : ''}${mins > 0 ? ` ${mins} min` : ''}`;
         }
         
-        return [
-          event.summary || 'Evento sin título',
-          start.toLocaleString(),
-          `${duration} minutos`
-        ];
+        dataTable.addRow([event.summary, startStr, endStr, durationStr]);
       });
       
-      dataTable.addRows(tableData);
+      // Crear el div para la tabla
+      const tableDiv = document.createElement('div');
+      tableDiv.style.width = '100%';
+      tableDiv.style.marginBottom = '1rem';
+      chartRef.current.appendChild(tableDiv);
       
+      // Opciones de la tabla
       const options = {
-        showRowNumber: true,
+        showRowNumber: false,
         width: '100%',
         height: '100%',
-        allowHtml: true,
         cssClassNames: {
-          headerRow: isDarkMode ? 'dark-header' : 'light-header',
-          tableRow: isDarkMode ? 'dark-row' : 'light-row',
-          oddTableRow: isDarkMode ? 'dark-odd-row' : 'light-odd-row'
+          headerRow: 'bg-muted',
+          tableRow: 'hover:bg-muted/50',
+          oddTableRow: 'bg-card',
+          selectedTableRow: 'bg-primary/20',
+          hoverTableRow: 'bg-muted/50',
+          headerCell: 'py-2 px-4 text-muted-foreground font-medium text-left border-border',
+          tableCell: 'py-2 px-4 border-b border-border',
+          rowNumberCell: 'py-2 px-4 border-b border-border'
         }
       };
       
-      const table = new window.google.visualization.Table(chartRef.current);
-      
-      // Aplicar estilos al contenedor antes de dibujar
-      const styleId = 'google-charts-table-styles';
-      if (!document.getElementById(styleId)) {
-        const style = document.createElement('style');
-        style.id = styleId;
-        style.textContent = `
-          .dark-header { background-color: #2d3748 !important; color: #ffffff !important; }
-          .dark-row { background-color: #1a202c !important; color: #e2e8f0 !important; }
-          .dark-odd-row { background-color: #2d3748 !important; color: #e2e8f0 !important; }
-          .light-header { background-color: #f7fafc !important; color: #1a202c !important; }
-          .light-row { background-color: #ffffff !important; color: #1a202c !important; }
-          .light-odd-row { background-color: #edf2f7 !important; color: #1a202c !important; }
-          
-          .google-visualization-table-tr-head th {
-            color: ${isDarkMode ? '#ffffff !important' : '#1a202c !important'};
-            background-color: ${isDarkMode ? '#2d3748 !important' : '#f7fafc !important'};
-          }
-          .google-visualization-table-tr-odd td, 
-          .google-visualization-table-tr-even td {
-            color: ${isDarkMode ? '#e2e8f0 !important' : '#1a202c !important'};
-            background-color: ${isDarkMode ? '#1a202c !important' : '#ffffff !important'};
-          }
-        `;
-        document.head.appendChild(style);
-      }
-      
+      // Crear y dibujar la tabla
+      const table = new window.google.visualization.Table(tableDiv);
       table.draw(dataTable, options);
+      
     } catch (error) {
-      console.error('También falló la tabla de eventos:', error);
-      setChartError('No se pudieron visualizar los eventos');
+      console.error('Error al crear la tabla de eventos:', error);
     }
   };
 
   const countEmailsBySender = () => {
     if (!emails) return [];
-
-    const senders: Record<string, number> = {};
     
+    const senderCount: Record<string, number> = {};
+    
+    // Contar correos por remitente
     emails.forEach(email => {
-      // Extraer el dominio del remitente
-      const matches = email.from.match(/@([^>]+)/);
-      const domain = matches ? matches[1] : 'Otro';
-      
-      if (!senders[domain]) {
-        senders[domain] = 0;
+      // Extraer solo el nombre del remitente (antes del <email>)
+      let sender = email.from;
+      const nameMatch = email.from.match(/(.*?)\s*<.*?>/);
+      if (nameMatch && nameMatch[1]) {
+        sender = nameMatch[1].trim();
       }
-      senders[domain]++;
+      
+      senderCount[sender] = (senderCount[sender] || 0) + 1;
     });
-
-    // Convertir a array para Google Charts
-    return Object.entries(senders);
+    
+    // Convertir a formato para gráfico
+    return Object.entries(senderCount);
   };
 
-  // Implementación de la función drawEmailTable faltante
   const drawEmailTable = () => {
-    if (!emails || !chartRef.current || emails.length === 0) return;
-
+    if (!emails || !chartRef.current || !window.google || !window.google.visualization) return;
+    
     try {
-      // Crear tabla con detalles de los correos
+      // Crear una tabla de datos para emails
       const dataTable = new window.google.visualization.DataTable();
       dataTable.addColumn('string', 'Remitente');
       dataTable.addColumn('string', 'Asunto');
       dataTable.addColumn('string', 'Fecha');
-
-      const tableData = emails.map(email => [
-        email.from,
-        email.subject,
-        new Date(email.date).toLocaleString('es', { 
-          dateStyle: 'short', 
-          timeStyle: 'short' 
-        })
-      ]);
-
-      dataTable.addRows(tableData);
-
+      
+      emails.slice(0, 10).forEach(email => {
+        const date = new Date(email.date);
+        const dateStr = date.toLocaleString('es-ES', {
+          day: '2-digit',
+          month: 'short',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+        
+        // Extraer solo el nombre del remitente (antes del <email>)
+        let sender = email.from;
+        const nameMatch = email.from.match(/(.*?)\s*<.*?>/);
+        if (nameMatch && nameMatch[1]) {
+          sender = nameMatch[1].trim();
+        }
+        
+        dataTable.addRow([sender, email.subject, dateStr]);
+      });
+      
       // Crear el div para la tabla
       const tableDiv = document.createElement('div');
       tableDiv.style.width = '100%';
-      tableDiv.style.marginTop = '1rem';
-      tableDiv.className = 'email-table-container';
+      tableDiv.style.marginBottom = '1rem';
       chartRef.current.appendChild(tableDiv);
-
-      const table = new window.google.visualization.Table(tableDiv);
-      table.draw(dataTable, {
-        showRowNumber: true,
+      
+      // Opciones de la tabla
+      const options = {
+        showRowNumber: false,
         width: '100%',
         height: '100%',
         cssClassNames: {
-          headerRow: 'shadcn-header-row',
-          tableRow: 'shadcn-table-row',
-          oddTableRow: 'shadcn-odd-row',
-          selectedTableRow: 'shadcn-selected-row',
-          hoverTableRow: 'shadcn-hover-row',
-          headerCell: 'shadcn-header-cell',
-          tableCell: 'shadcn-table-cell',
+          headerRow: 'bg-muted',
+          tableRow: 'hover:bg-muted/50',
+          oddTableRow: 'bg-card',
+          selectedTableRow: 'bg-primary/20',
+          hoverTableRow: 'bg-muted/50',
+          headerCell: 'py-2 px-4 text-muted-foreground font-medium text-left border-border',
+          tableCell: 'py-2 px-4 border-b border-border',
+          rowNumberCell: 'py-2 px-4 border-b border-border'
         }
-      });
+      };
+      
+      // Crear y dibujar la tabla
+      const table = new window.google.visualization.Table(tableDiv);
+      table.draw(dataTable, options);
+      
     } catch (error) {
-      console.error('Error al crear la tabla de correos:', error);
+      console.error('Error al crear la tabla de emails:', error);
     }
   };
 
-  // Si no hay datos para mostrar
-  if ((type === 'emails' && (!emails || emails.length === 0)) || 
-      (type === 'events' && (!events || events.length === 0))) {
-    return (
-      <div className="data-charts">
-        <div className="flex items-center justify-center h-[400px] bg-card rounded-md border">
-          <p className="text-foreground font-medium">No hay datos para mostrar</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Mostrar estado de carga o error
-  if (isLoading) {
-    return (
-      <Card className="w-full">
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            {type === 'emails' ? <BarChart4 className="h-5 w-5" /> : <PieChart className="h-5 w-5" />}
-            {type === 'emails' ? 'Análisis de Correos' : 'Análisis de Eventos'}
-          </CardTitle>
-          <CardDescription>Cargando visualizaciones...</CardDescription>
-        </CardHeader>
-        <CardContent className="flex justify-center items-center h-[300px]">
-          <div className="animate-pulse flex flex-col items-center justify-center space-y-4">
-            <div className="rounded-full bg-muted h-16 w-16 flex items-center justify-center">
-              <div className="animate-spin h-8 w-8 rounded-full border-2 border-primary border-t-transparent"></div>
-            </div>
-            <div className="text-sm text-muted-foreground">Cargando gráficos...</div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (chartError) {
-    return (
-      <Alert variant="destructive" className="mb-6">
-        <AlertCircle className="h-4 w-4" />
-        <AlertTitle>Error</AlertTitle>
-        <AlertDescription>{chartError}</AlertDescription>
-      </Alert>
-    );
-  }
-
+  // Renderizar
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle className="text-lg flex items-center gap-2">
-          {type === 'emails' ? <BarChart4 className="h-5 w-5" /> : <PieChart className="h-5 w-5" />}
-          {type === 'emails' ? 'Análisis de Correos' : 'Análisis de Eventos'}
-        </CardTitle>
-        <CardDescription>
-          {type === 'emails' 
-            ? 'Visualización de estadísticas de correos recientes' 
-            : 'Visualización de estadísticas de eventos de calendario'}
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div ref={chartRef} className="w-full overflow-hidden rounded-md" />
-      </CardContent>
-    </Card>
+    <div className="space-y-6">
+      {chartError && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{chartError}</AlertDescription>
+        </Alert>
+      )}
+      
+      {isLoading ? (
+        <div className="flex flex-col items-center justify-center p-8">
+          <div className="h-16 w-16 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+          <p className="mt-4 text-sm text-muted-foreground">Cargando visualización...</p>
+        </div>
+      ) : (
+        <div ref={chartRef} className="min-h-[400px] w-full" />
+      )}
+    </div>
   );
 };
 

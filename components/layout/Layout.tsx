@@ -1,7 +1,7 @@
 import React, { ReactNode } from 'react';
 import { MainNav } from './MainNav';
 import { Toaster } from "@/components/ui/toaster";
-import Navigation from "@/components/Navigation";
+import { Navigation } from "@/components/ui/navigation";
 
 interface LayoutProps {
   children: ReactNode;

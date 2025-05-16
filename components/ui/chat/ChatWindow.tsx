@@ -1,6 +1,4 @@
 import React, { useEffect, useRef, useState } from "react";
-// Comentamos temporalmente la importación del componente ScrollArea
-// import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 import { motion, AnimatePresence } from "framer-motion";
@@ -166,9 +164,9 @@ export function ChatWindow({
                 exit="exit"
                 className="flex items-center space-x-2 text-muted-foreground p-3 rounded-full self-start bg-card/30 ml-4 mt-1 mb-4"
               >
-                <div className="w-2 h-2 rounded-full bg-black/60 animate-bounce"></div>
-                <div className="w-2 h-2 rounded-full bg-black/60 animate-bounce" style={{ animationDelay: "0.2s" }}></div>
-                <div className="w-2 h-2 rounded-full bg-black/60 animate-bounce" style={{ animationDelay: "0.4s" }}></div>
+                <div className="w-2 h-2 rounded-full bg-black/60 dark:bg-white/60 animate-bounce"></div>
+                <div className="w-2 h-2 rounded-full bg-black/60 dark:bg-white/60 animate-bounce" style={{ animationDelay: "0.2s" }}></div>
+                <div className="w-2 h-2 rounded-full bg-black/60 dark:bg-white/60 animate-bounce" style={{ animationDelay: "0.4s" }}></div>
               </motion.div>
             )}
           </AnimatePresence>
@@ -187,7 +185,7 @@ export function ChatWindow({
             animate="animate"
             exit="exit"
             onClick={scrollToBottom}
-            className="absolute bottom-4 right-4 p-3 rounded-full bg-black text-white shadow-lg hover:bg-black/80 transition-all z-10"
+            className="absolute bottom-4 right-4 p-3 rounded-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 transition-all z-10"
             aria-label="Desplazarse hacia abajo"
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

@@ -7,7 +7,7 @@ import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import { SpeechRecognition } from '@/components/ui/speech-recognition';
-import { ChatBubble, ChatWindow, ChatInput } from '@/components/chat';
+import { ChatBubble, ChatWindow, ChatInput } from '@/components/ui/chat';
 import { DriveFileList } from '@/components/drive';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { RefreshCcw, Zap } from 'lucide-react';
