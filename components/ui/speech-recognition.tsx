@@ -72,87 +72,87 @@ export function SpeechRecognition({
   useEffect(() => {
     if (typeof window === 'undefined') return; // No ejecutar en SSR
     
-    try {
-      // Comprobar soporte de navegador
-      const SpeechRecognition = 
-        window.SpeechRecognition || 
-        (window as any).webkitSpeechRecognition;
-      
-      if (!SpeechRecognition) {
-        console.error("API de reconocimiento de voz no soportada");
-        setIsSupported(false);
-        setError("Tu navegador no soporta reconocimiento de voz");
-        return;
-      }
+      try {
+        // Comprobar soporte de navegador
+        const SpeechRecognition = 
+          window.SpeechRecognition || 
+          (window as any).webkitSpeechRecognition;
+        
+        if (!SpeechRecognition) {
+          console.error("API de reconocimiento de voz no soportada");
+          setIsSupported(false);
+          setError("Tu navegador no soporta reconocimiento de voz");
+          return;
+        }
 
       recognitionRef.current = new SpeechRecognition() as SpeechRecognitionInstance;
-      const recognition = recognitionRef.current;
-      
-      recognition.continuous = true;
-      recognition.interimResults = true;
+        const recognition = recognitionRef.current;
+        
+        recognition.continuous = true;
+        recognition.interimResults = true;
       recognition.lang = language;
-      
-      // Configurar eventos
-      recognition.onstart = () => {
-        console.log("Reconocimiento iniciado");
-        setIsListening(true);
-        if (onListening) onListening(true);
-        // Reiniciar transcripción acumulada
-        accumulatedTranscriptRef.current = "";
+        
+        // Configurar eventos
+        recognition.onstart = () => {
+          console.log("Reconocimiento iniciado");
+          setIsListening(true);
+          if (onListening) onListening(true);
+          // Reiniciar transcripción acumulada
+          accumulatedTranscriptRef.current = "";
         finalTranscriptSentRef.current = false;
-      };
-      
+        };
+        
       recognition.onresult = (event: SpeechRecognitionEvent) => {
-        let interimTranscript = '';
-        let finalTranscript = '';
-        
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          const transcript = event.results[i][0].transcript;
-          if (event.results[i].isFinal) {
-            finalTranscript += transcript;
-          } else {
-            interimTranscript += transcript;
+          let interimTranscript = '';
+          let finalTranscript = '';
+          
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            const transcript = event.results[i][0].transcript;
+            if (event.results[i].isFinal) {
+              finalTranscript += transcript;
+            } else {
+              interimTranscript += transcript;
+            }
           }
-        }
-        
-        // Actualizar transcripción acumulada con resultados finales
-        if (finalTranscript) {
-          accumulatedTranscriptRef.current += finalTranscript;
-        }
-        
-        // Si hay resultado final, enviarlo al textarea
-        if (finalTranscript) {
-          console.log("Enviando transcripción final:", accumulatedTranscriptRef.current);
-          onTranscript(accumulatedTranscriptRef.current);
+          
+          // Actualizar transcripción acumulada con resultados finales
+          if (finalTranscript) {
+            accumulatedTranscriptRef.current += finalTranscript;
+          }
+          
+          // Si hay resultado final, enviarlo al textarea
+          if (finalTranscript) {
+            console.log("Enviando transcripción final:", accumulatedTranscriptRef.current);
+            onTranscript(accumulatedTranscriptRef.current);
           finalTranscriptSentRef.current = true;
-        }
-      };
-      
+          }
+        };
+        
       recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-        console.error('Error en reconocimiento de voz:', event.error);
+          console.error('Error en reconocimiento de voz:', event.error);
         const errorMessage = getErrorMessage(event.error);
         setError(errorMessage);
-        setIsListening(false);
-        if (onListening) onListening(false);
-      };
-      
-      recognition.onend = () => {
-        console.log("Reconocimiento finalizado");
-        setIsListening(false);
-        if (onListening) onListening(false);
+          setIsListening(false);
+          if (onListening) onListening(false);
+        };
         
+        recognition.onend = () => {
+          console.log("Reconocimiento finalizado");
+          setIsListening(false);
+          if (onListening) onListening(false);
+          
         // Cuando termina, enviar la transcripción acumulada si existe y no se ha enviado ya
         if (accumulatedTranscriptRef.current && !finalTranscriptSentRef.current) {
-          console.log("Enviando transcripción final al terminar:", accumulatedTranscriptRef.current);
-          onTranscript(accumulatedTranscriptRef.current);
-        }
-      };
-      
-    } catch (error) {
-      console.error("Error inicializando reconocimiento de voz:", error);
-      setIsSupported(false);
-      setError("Error al inicializar reconocimiento de voz");
-    }
+            console.log("Enviando transcripción final al terminar:", accumulatedTranscriptRef.current);
+            onTranscript(accumulatedTranscriptRef.current);
+          }
+        };
+        
+      } catch (error) {
+        console.error("Error inicializando reconocimiento de voz:", error);
+        setIsSupported(false);
+        setError("Error al inicializar reconocimiento de voz");
+      }
     
     return () => {
       // Limpiar al desmontar

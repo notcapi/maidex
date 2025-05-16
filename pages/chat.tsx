@@ -133,11 +133,11 @@ export default function Chat() {
       
       // Redirigir a una nueva conversación
       router.push(`/chat?id=${newConversationId}`);
-      
-      toast({
-        title: "Conversación reiniciada",
-        description: "Se ha reiniciado la conversación"
-      });
+        
+        toast({
+          title: "Conversación reiniciada",
+          description: "Se ha reiniciado la conversación"
+        });
     } catch (error) {
       console.error('Error al reiniciar la conversación:', error);
       toast({
@@ -268,7 +268,7 @@ export default function Chat() {
             conversationId // Añadir ID de conversación para persistencia 
           })
         });
-        
+
         const result = await response.json();
         
         if (result.success) {
@@ -349,13 +349,13 @@ export default function Chat() {
       
       // Añadir respuesta del sistema con la lista de archivos
       addMessage({
-        content: responseMessage,
-        isUser: false,
-        driveFiles: driveFiles
+          content: responseMessage,
+          isUser: false,
+          driveFiles: driveFiles
       });
       
       return;
-    }
+    } 
     
     // Para buscar archivos
     if (result.action === 'search_files') {
@@ -373,9 +373,9 @@ export default function Chat() {
       
       // Añadir respuesta del sistema con los resultados de búsqueda
       addMessage({
-        content: responseMessage,
-        isUser: false,
-        driveFiles: driveFiles
+          content: responseMessage,
+          isUser: false,
+          driveFiles: driveFiles
       });
       
       return;
@@ -406,9 +406,9 @@ export default function Chat() {
       
       // Añadir respuesta del sistema con el archivo que puede descargarse
       addMessage({
-        content: responseMessage,
-        isUser: false,
-        driveFiles: driveFiles
+          content: responseMessage,
+          isUser: false,
+          driveFiles: driveFiles
       });
       
       return;
@@ -416,7 +416,7 @@ export default function Chat() {
     
     // Añadir respuesta del sistema para otros casos
     addMessage({
-      content: responseMessage,
+        content: responseMessage,
       isUser: false
     });
   };
@@ -435,12 +435,12 @@ export default function Chat() {
     });
     
     addMessage({
-      content: isOverloaded ? 
-        `Lo siento, el servicio de Claude está sobrecargado en este momento. ${result.params ? 'He intentado procesar tu solicitud con un método alternativo.' : 'Por favor, inténtalo de nuevo en unos minutos.'}` :
-        `Lo siento, no pude completar la acción: ${errorMsg}`,
+        content: isOverloaded ? 
+          `Lo siento, el servicio de Claude está sobrecargado en este momento. ${result.params ? 'He intentado procesar tu solicitud con un método alternativo.' : 'Por favor, inténtalo de nuevo en unos minutos.'}` :
+          `Lo siento, no pude completar la acción: ${errorMsg}`,
       isUser: false
-    });
-  };
+        });
+      };
 
   if (status === 'loading') {
     return (
@@ -470,19 +470,19 @@ export default function Chat() {
                   >
                     <div className="text-xl">{example.icon}</div>
                     <span className="text-sm font-medium">{example.text}</span>
-                  </div>
+          </div>
                 ))}
                 <Separator className="my-4 bg-border dark:bg-slate-700" />
-                <Button 
+          <Button 
                   variant="outline" 
                   size="sm" 
                   className="w-full justify-start text-sm text-muted-foreground dark:text-slate-400 dark:hover:text-slate-300"
-                  onClick={handleResetConversation}
-                  disabled={loading}
-                >
+            onClick={handleResetConversation}
+            disabled={loading}
+          >
                   <RefreshCcw className="mr-2 h-4 w-4" />
                   Nueva conversación
-                </Button>
+          </Button>
               </div>
             </CardContent>
           </Card>
@@ -520,7 +520,7 @@ export default function Chat() {
                       />
                     ))}
                     <div ref={messagesEndRef} />
-                  </div>
+                        </div>
                 </ScrollArea>
               </div>
               
@@ -535,13 +535,13 @@ export default function Chat() {
                   isListening={isListening}
                   initialValue={input}
                 />
-                
+              
                 {/* Botones de acción móviles */}
                 <div className="md:hidden flex justify-between mt-3">
                   {examples.map((example, index) => (
-                    <Button 
+                    <Button
                       key={index}
-                      variant="outline" 
+                      variant="outline"
                       size="sm"
                       onClick={() => handleExampleClick(example.text)}
                       className="text-xs flex-1 mx-1"

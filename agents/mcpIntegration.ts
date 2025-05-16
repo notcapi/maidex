@@ -148,7 +148,7 @@ export class MCPIntegration {
    */
   async initializeMCPServer(accessToken: string): Promise<void> {
     try {
-      // Importación dinámica del servidor MCP
+    // Importación dinámica del servidor MCP
       const module = await import('../mcp/serverESM.mjs');
       const MCPServerManager = module.MCPServerManager;
       this.mcpServer = new MCPServerManager();
@@ -170,10 +170,10 @@ export class MCPIntegration {
     if (this.mcpServer && typeof this.mcpServer.getSerializedTools === 'function') {
       try {
         const tools = this.mcpServer.getSerializedTools().filter((tool: MCPTool) => {
-          if (action === 'send_email' && tool.name === 'send_email') return true;
-          if (action === 'create_event' && tool.name === 'create_event') return true;
-          return false;
-        });
+        if (action === 'send_email' && tool.name === 'send_email') return true;
+        if (action === 'create_event' && tool.name === 'create_event') return true;
+        return false;
+      });
         return tools;
       } catch (error) {
         console.error("Error al obtener herramientas serializadas:", error);
@@ -236,201 +236,227 @@ Asistente: [LLAMADA A create_event]`;
   }
 
   /**
-   * Ejecuta la acción MCP
+   * Ejecuta una acción MCP con el texto y tipo de acción proporcionados
    * @param text Texto de la solicitud del usuario
-   * @param action Tipo de acción a ejecutar ('send_email', 'create_event', etc)
+   * @param action Tipo de acción ('send_email' o 'create_event')
    * @param accessToken Token de acceso opcional para APIs de Google
-   * @returns Resultado de la acción con estado, mensaje y parámetros
+   * @returns Resultado de la acción MCP
    */
   async executeMCPAction(text: string, action: string, accessToken?: string): Promise<MCPResponse> {
     try {
-      // Inicializar servidor MCP si tenemos accessToken y no está inicializado
-      if (accessToken && !this.mcpServer) {
-        await this.initializeMCPServer(accessToken);
-      }
-
-      // Si tenemos un servidor MCP, usar su método executeQuery
-      if (this.mcpServer) {
-        console.log(`Ejecutando acción MCP: ${action} con texto: ${text}`);
-        const result = await this.mcpServer.executeQuery(text, action);
-        
-        // Verificar que result no sea undefined antes de acceder a sus propiedades
-        if (result && result.success) {
-          return {
-            success: true,
-            message: result.result?.message || `Acción MCP ejecutada correctamente: ${action}`,
-            params: result.params
-          };
-        } else {
-          return {
-            success: false,
-            message: result?.error || "Error desconocido al ejecutar acción MCP",
-            params: result?.params
-          };
+      // Si tenemos token de acceso, inicializamos el servidor MCP
+      if (accessToken) {
+        try {
+          await this.initializeMCPServer(accessToken);
+          console.log('Servidor MCP inicializado correctamente con token de acceso');
+        } catch (error) {
+          console.warn('No se pudo inicializar el servidor MCP, usando fallback:', error);
+          // Continuamos con el flujo alternativo si falla la inicialización
         }
+      } else {
+        console.warn('No se proporcionó token de acceso para MCP, usando fallback');
       }
 
-      // Método anterior para compatibilidad
+      // Obtener las herramientas según la acción
       const tools = this.getToolsForAction(action);
-      console.log(`Ejecutando con capacidades: ${JSON.stringify(tools.map(t => t.name))}`);
       
-      // Configurar mensajes con prompts optimizados
+      if (!tools || tools.length === 0) {
+        console.error(`No se encontraron herramientas para la acción: ${action}`);
+        return {
+          success: false,
+          error: `Acción no soportada: ${action}`
+        };
+      }
+
+      console.log(`Ejecutando acción MCP: ${action} con herramientas:`, JSON.stringify(tools.map(t => t.name)));
+      
+      // Crear prompt de sistema
+      const systemPrompt = this.createSystemPrompt(action);
+      
+      // Preparar mensajes para Anthropic
       const messages: MessageParam[] = [
-        { role: 'user', content: text }
+        {
+          role: 'user',
+          content: text
+        }
       ];
+
+      // Crear y enviar la solicitud a Anthropic
+      console.log(`Enviando solicitud a ${this.model} con prompt: "${text}"`);
       
-      console.log(`Enviando prompt a Claude: ${text}`);
-      
-      // Hacer la llamada a Claude con configuración optimizada para uso de herramientas
       const response = await this.anthropic.messages.create({
         model: this.model,
         max_tokens: this.maxTokens,
         temperature: this.temperature,
-        system: this.createSystemPrompt(action),
-        messages: messages,
+        system: systemPrompt,
+        messages,
         tools: tools
       });
+
+      // Log de la respuesta completa para propósitos de debug
+      console.log('Respuesta completa de Anthropic:', JSON.stringify(response, null, 2));
       
-      // Para depuración
-      if (response.content[0].type === 'text') {
-        console.log("Claude respondió. Tipo de contenido: text");
-      }
+      // Extraer la respuesta de herramientas si existe
+      const toolCalls = response.content.filter(item => 
+        item.type === 'tool_use' || 
+        (item.type === 'tool_result' && 'tool_use_id' in item)
+      );
       
-      // Verificar si Claude utilizó la herramienta
-      if (response.content.some(item => item.type === 'tool_use')) {
-        // Encontrar el tool_use en el contenido
-        const toolUseItem = response.content.find(item => item.type === 'tool_use');
-        if (toolUseItem && toolUseItem.type === 'tool_use') {
-          console.log(`Claude usó la herramienta correctamente: ${toolUseItem.name}`);
-          
-          // Extraer los parámetros de la llamada a la herramienta
-          const params = toolUseItem.input;
-          
-          // Si tenemos un servidor MCP, procesar la llamada
-          if (this.mcpServer && accessToken) {
-            const result = await this.mcpServer.processToolCall(toolUseItem.name, params);
-            if (result.success) {
-              let message = `Acción MCP ejecutada correctamente: ${action}`;
-              // Comprueba las propiedades de manera segura
-              if ('messageId' in result) {
-                message = `Correo enviado correctamente`;
-              } else if ('eventId' in result) {
-                message = `Evento creado correctamente`;
-              }
-              
-              return {
-                success: true,
-                message,
-                params
-              };
-            } else {
-              return {
-                success: false,
-                message: `Error al ejecutar acción MCP: ${result.error || "Error desconocido"}`,
-                params
-              };
-            }
-          }
-          
-          // Si no tenemos servidor MCP, simplemente devolver los parámetros
-          return {
-            success: true,
-            message: `Acción MCP ejecutada correctamente: ${action}`,
-            params
-          };
-        }
-      }
-      
-      // Si Claude sólo respondió con texto, intentar una vez más con un prompt más directo
-      if (response.content[0].type === 'text') {
-        console.log("Claude no usó la herramienta como se esperaba, intentando con prompt más directo...");
+      // Si no hay llamadas a herramientas, manejarlo de manera explícita
+      if (toolCalls.length === 0) {
+        console.log('No hay llamadas a herramientas en la respuesta');
         
-        // Crear un prompt más directo que enfatice el uso de herramientas
-        let directPrompt = "";
-        
-        if (action === 'send_email') {
-          // Extraer información básica para crear un prompt más directo
-          const toMatch = text.match(/(?:a|para|@)\s*([a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/i);
-          const to = toMatch ? toMatch[1] : 'destinatario@example.com';
-          
-          // Extraer asunto si está presente
-          let subject = 'Mensaje automático';
-          const subjectMatch = text.match(/(?:asunto|tema|título|subject)[:\s]+["']?([^"'\n.]*)["']?/i);
-          if (subjectMatch) subject = subjectMatch[1].trim();
-          
-          directPrompt = `IMPORTANTE: UTILIZA LA HERRAMIENTA send_email PARA REALIZAR ESTA TAREA. NO RESPONDAS CON TEXTO. Usa la herramienta send_email para enviar un correo a ${to} con asunto "${subject}" y el siguiente contenido: "${text}"`;
-        } else if (action === 'create_event') {
-          directPrompt = `IMPORTANTE: UTILIZA LA HERRAMIENTA create_event PARA REALIZAR ESTA TAREA. NO RESPONDAS CON TEXTO. Usa la herramienta create_event para crear un evento en el calendario con la siguiente información: "${text}"`;
+        // Intentar extraer parámetros manualmente como fallback
+        const extractedParams = this.extractParamsManually(text, action);
+        if (extractedParams.success) {
+          return extractedParams;
         }
         
-        console.log(`Intentando de nuevo con prompt explícito: ${directPrompt}`);
-        
-        // Segundo intento con prompt más directo
-        const secondResponse = await this.anthropic.messages.create({
-          model: this.model,
-          max_tokens: this.maxTokens,
-          temperature: this.temperature,
-          system: this.createSystemPrompt(action),
-          messages: [{ role: 'user', content: directPrompt }],
-          tools: tools
-        });
-        
-        console.log(`Segundo intento - Tipo de contenido: ${secondResponse.content[0].type}`);
-        
-        // Verificar si ahora Claude utilizó la herramienta
-        if (secondResponse.content.some(item => item.type === 'tool_use')) {
-          const toolUseItem = secondResponse.content.find(item => item.type === 'tool_use');
-          if (toolUseItem && toolUseItem.type === 'tool_use') {
-            console.log(`Claude usó la herramienta correctamente en el segundo intento: ${toolUseItem.name}`);
+        // Si Claude respondió sin usar herramientas, extraer el texto
+        const textContent = response.content
+          .filter(item => item.type === 'text')
+          .map(item => (item as any).text)
+          .join(' ');
+          
+        return {
+          success: false,
+          message: textContent,
+          error: 'El modelo no utilizó las herramientas esperadas'
+        };
+      }
+      
+      // Procesar la primera llamada a herramienta (asumimos que es la correcta)
+      const toolUses = toolCalls.filter(item => item.type === 'tool_use');
+      
+      if (toolUses.length === 0) {
+        return {
+          success: false,
+          error: 'No se encontraron tool_use en la respuesta'
+        };
+      }
+      
+      const toolUse = toolUses[0];
+      if (toolUse.type !== 'tool_use' || !('name' in toolUse) || !('input' in toolUse)) {
+        return {
+          success: false,
+          error: 'La estructura de tool_use es inválida'
+        };
+      }
+      
+      // Procesar según la herramienta usada
+      const toolName = toolUse.name;
+      const toolInput = toolUse.input as Record<string, any>;
+      
+      console.log(`Herramienta utilizada: ${toolName} con input:`, toolInput);
+      
+      // Si tenemos un servidor MCP activo, usar directamente sus implementaciones
+      if (this.mcpServer && accessToken) {
+        if (toolName === 'send_email' && action === 'send_email') {
+          try {
+            const emailParams = {
+              to: toolInput.to as string[],
+              subject: toolInput.subject as string,
+              body: toolInput.body as string,
+              cc: toolInput.cc as string[] | undefined,
+              bcc: toolInput.bcc as string[] | undefined,
+              mimeType: toolInput.mimeType as string | undefined,
+              htmlBody: toolInput.htmlBody as string | undefined,
+              driveAttachments: toolInput.driveAttachments as string[] | undefined
+            };
             
-            // Extraer los parámetros de la llamada a la herramienta
-            const params = toolUseItem.input;
+            const emailResult = await this.mcpServer.sendEmail(emailParams);
+            console.log('Resultado de sendEmail MCP:', emailResult);
             
-            // Si tenemos un servidor MCP, procesar la llamada
-            if (this.mcpServer && accessToken) {
-              const result = await this.mcpServer.processToolCall(toolUseItem.name, params);
-              if (result.success) {
-                let message = `Acción MCP ejecutada correctamente en segundo intento: ${action}`;
-                // Comprueba las propiedades de manera segura
-                if ('messageId' in result) {
-                  message = `Correo enviado correctamente`;
-                } else if ('eventId' in result) {
-                  message = `Evento creado correctamente`;
-                }
-                
-                return {
-                  success: true,
-                  message,
-                  params
-                };
-              } else {
-                return {
-                  success: false,
-                  message: `Error al ejecutar acción MCP: ${result.error || "Error desconocido"}`,
-                  params
-                };
-              }
-            }
-            
-            // Si no tenemos servidor MCP, simplemente devolver los parámetros
             return {
               success: true,
-              message: `Acción MCP ejecutada correctamente en segundo intento: ${action}`,
-              params
+              params: emailParams,
+              messageId: emailResult.messageId || 'unknown-id',
+              message: 'Correo enviado correctamente'
+            };
+          } catch (error) {
+            console.error('Error al enviar correo con MCP:', error);
+            return {
+              success: false,
+              error: `Error al enviar correo: ${(error as Error).message}`
+            };
+          }
+        } 
+        else if (toolName === 'create_event' && action === 'create_event') {
+          try {
+            const eventParams = {
+              summary: toolInput.summary as string,
+              start: toolInput.start as string,
+              end: toolInput.end as string,
+              location: toolInput.location as string | undefined
+            };
+            
+            const calendarResult = await this.mcpServer.createEvent(eventParams);
+            console.log('Resultado de createEvent MCP:', calendarResult);
+            
+            return {
+              success: true,
+              params: eventParams,
+              eventId: calendarResult.eventId || 'unknown-id',
+              message: 'Evento creado correctamente'
+            };
+          } catch (error) {
+            console.error('Error al crear evento con MCP:', error);
+            return {
+              success: false,
+              error: `Error al crear evento: ${(error as Error).message}`
             };
           }
         }
+      } else if (accessToken) {
+        // Usar agentes directamente si el servidor MCP no está disponible
+        try {
+          if (toolName === 'send_email' && action === 'send_email') {
+            // Importar el EmailAgent como fallback
+            const { EmailAgent } = await import('./emailAgent');
+            const emailAgent = new EmailAgent();
+            
+            const emailResult = await emailAgent.sendEmail(accessToken, toolInput);
+            
+            return {
+              success: emailResult.success,
+              params: toolInput,
+              messageId: emailResult.messageId,
+              error: emailResult.error,
+              message: 'Correo enviado correctamente'
+            };
+          } 
+          else if (toolName === 'create_event' && action === 'create_event') {
+            // Importar el CalendarAgent como fallback
+            const { CalendarAgent } = await import('./calendarAgent');
+            const calendarAgent = new CalendarAgent();
+            
+            const calendarResult = await calendarAgent.createEvent(accessToken, toolInput);
+            
+            return {
+              success: calendarResult.success,
+              params: toolInput,
+              eventId: calendarResult.eventId,
+              error: calendarResult.error,
+              message: 'Evento creado correctamente'
+            };
+          }
+        } catch (error) {
+          console.error('Error al ejecutar agente fallback:', error);
+        }
       }
+
+      // Devolver resultado genérico si no podemos manejar específicamente
+      return {
+        success: true,
+        params: toolInput,
+        message: `Acción ${action} procesada correctamente`
+      };
       
-      console.log("Claude no usó la herramienta como se esperaba, implementando fallback...");
-      
-      // Implementar extracción manual como fallback
-      return this.extractParamsManually(text, action);
-    } catch (error) {
-      console.error("Error al ejecutar acción MCP:", error);
+    } catch (error: any) {
+      console.error('Error al ejecutar acción MCP:', error);
       return {
         success: false,
-        message: `Error al procesar la solicitud: ${(error as Error).message}`
+        error: error.message || 'Error desconocido al ejecutar la acción'
       };
     }
   }

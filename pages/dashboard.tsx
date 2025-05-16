@@ -129,63 +129,63 @@ export default function Dashboard() {
           <h1 className="text-3xl font-bold text-foreground dark:text-slate-100">Panel de Estadísticas</h1>
           <p className="text-muted-foreground dark:text-slate-400">Visualiza tus correos y eventos recientes</p>
           <Separator className="my-4" />
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card className="overflow-hidden border border-border dark:border-slate-700">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-card dark:bg-slate-900">
-              <CardTitle className="text-sm font-medium">Total Correos</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Correos</CardTitle>
               <Mail className="h-4 w-4 text-muted-foreground dark:text-slate-400" />
-            </CardHeader>
+          </CardHeader>
             <CardContent className="pt-4">
               <div className="text-2xl font-bold text-foreground dark:text-slate-100">{emails.length}</div>
               <p className="text-xs text-muted-foreground dark:text-slate-400">
-                Correos recibidos recientemente
+              Correos recibidos recientemente
                 <span className="inline-flex items-center ml-2 text-primary">
                   <ArrowUpRight className="h-3 w-3" />
                 </span>
-              </p>
-            </CardContent>
-          </Card>
-          
+            </p>
+          </CardContent>
+        </Card>
+        
           <Card className="overflow-hidden border border-border dark:border-slate-700">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-card dark:bg-slate-900">
-              <CardTitle className="text-sm font-medium">Eventos Próximos</CardTitle>
+            <CardTitle className="text-sm font-medium">Eventos Próximos</CardTitle>
               <Calendar className="h-4 w-4 text-muted-foreground dark:text-slate-400" />
-            </CardHeader>
+          </CardHeader>
             <CardContent className="pt-4">
               <div className="text-2xl font-bold text-foreground dark:text-slate-100">{events.length}</div>
               <p className="text-xs text-muted-foreground dark:text-slate-400">
-                Eventos programados para hoy
-              </p>
-            </CardContent>
-          </Card>
-          
+              Eventos programados para hoy
+            </p>
+          </CardContent>
+        </Card>
+        
           <Card className="overflow-hidden border border-border dark:border-slate-700">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-card dark:bg-slate-900">
-              <CardTitle className="text-sm font-medium">Estado de Conexión</CardTitle>
+            <CardTitle className="text-sm font-medium">Estado de Conexión</CardTitle>
               <Shield className="h-4 w-4 text-muted-foreground dark:text-slate-400" />
-            </CardHeader>
+          </CardHeader>
             <CardContent className="pt-4">
-              <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-2">
                 <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20 dark:bg-green-500/20">
-                  Conectado
-                </Badge>
+                Conectado
+              </Badge>
                 <span className="text-sm text-muted-foreground dark:text-slate-400">
-                  {session?.user?.email}
-                </span>
-              </div>
-              <Progress value={100} className="mt-3" />
-            </CardContent>
-          </Card>
-        </div>
-        
-        <Tabs defaultValue="emails" className="w-full">
+                {session?.user?.email}
+              </span>
+            </div>
+            <Progress value={100} className="mt-3" />
+          </CardContent>
+        </Card>
+      </div>
+      
+      <Tabs defaultValue="emails" className="w-full">
           <TabsList className="grid w-full md:w-[400px] grid-cols-2 mb-6">
-            <TabsTrigger value="emails">Correos Electrónicos</TabsTrigger>
-            <TabsTrigger value="events">Eventos del Calendario</TabsTrigger>
-          </TabsList>
-          
+          <TabsTrigger value="emails">Correos Electrónicos</TabsTrigger>
+          <TabsTrigger value="events">Eventos del Calendario</TabsTrigger>
+        </TabsList>
+        
           <TabsContent value="emails">
             <Card className="border border-border dark:border-slate-700">
               <CardHeader className="bg-card dark:bg-slate-900 border-b border-border dark:border-slate-700">
@@ -196,50 +196,50 @@ export default function Dashboard() {
                 <CardDescription className="text-muted-foreground dark:text-slate-400">
                   Datos y estadísticas de tus correos recientes
                 </CardDescription>
-              </CardHeader>
+            </CardHeader>
               <CardContent className="p-6">
-                {emails.length > 0 ? (
-                  <DataCharts emails={emails} type="emails" />
-                ) : (
+              {emails.length > 0 ? (
+                <DataCharts emails={emails} type="emails" />
+              ) : (
                   <p className="text-muted-foreground dark:text-slate-400 text-center py-8">
                     No hay datos de correos para mostrar
                   </p>
-                )}
-              </CardContent>
-            </Card>
-            
-            {emails.length > 0 && (
+              )}
+            </CardContent>
+          </Card>
+          
+          {emails.length > 0 && (
               <Card className="mt-6 border border-border dark:border-slate-700">
                 <CardHeader className="bg-card dark:bg-slate-900 border-b border-border dark:border-slate-700">
                   <CardTitle className="text-lg">Correos Recientes</CardTitle>
                   <CardDescription className="text-muted-foreground dark:text-slate-400">
                     Los últimos {Math.min(emails.length, 5)} correos recibidos
                   </CardDescription>
-                </CardHeader>
+              </CardHeader>
                 <CardContent className="p-0">
-                  <Table>
-                    <TableHeader>
+                <Table>
+                  <TableHeader>
                       <TableRow className="hover:bg-muted/50 dark:hover:bg-slate-800/50">
                         <TableHead className="w-[200px]">Remitente</TableHead>
-                        <TableHead>Asunto</TableHead>
+                      <TableHead>Asunto</TableHead>
                         <TableHead className="text-right w-[140px]">Fecha</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {emails.slice(0, 5).map((email) => (
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {emails.slice(0, 5).map((email) => (
                         <TableRow key={email.id} className="hover:bg-muted/50 dark:hover:bg-slate-800/50">
                           <TableCell className="font-medium">{email.from}</TableCell>
                           <TableCell className="text-muted-foreground dark:text-slate-400">{email.subject}</TableCell>
                           <TableCell className="text-muted-foreground dark:text-slate-400 text-right">{formatDate(email.date)}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
-          
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+        
           <TabsContent value="events">
             <Card className="border border-border dark:border-slate-700">
               <CardHeader className="bg-card dark:bg-slate-900 border-b border-border dark:border-slate-700">
@@ -250,50 +250,50 @@ export default function Dashboard() {
                 <CardDescription className="text-muted-foreground dark:text-slate-400">
                   Datos y estadísticas de tus próximos eventos
                 </CardDescription>
-              </CardHeader>
+            </CardHeader>
               <CardContent className="p-6">
-                {events.length > 0 ? (
-                  <DataCharts events={events} type="events" />
-                ) : (
+              {events.length > 0 ? (
+                <DataCharts events={events} type="events" />
+              ) : (
                   <p className="text-muted-foreground dark:text-slate-400 text-center py-8">
                     No hay eventos programados para mostrar
                   </p>
-                )}
-              </CardContent>
-            </Card>
-            
-            {events.length > 0 && (
+              )}
+            </CardContent>
+          </Card>
+          
+          {events.length > 0 && (
               <Card className="mt-6 border border-border dark:border-slate-700">
                 <CardHeader className="bg-card dark:bg-slate-900 border-b border-border dark:border-slate-700">
                   <CardTitle className="text-lg">Eventos Próximos</CardTitle>
                   <CardDescription className="text-muted-foreground dark:text-slate-400">
                     Tus próximos {Math.min(events.length, 5)} eventos programados
                   </CardDescription>
-                </CardHeader>
+              </CardHeader>
                 <CardContent className="p-0">
-                  <Table>
-                    <TableHeader>
+                <Table>
+                  <TableHeader>
                       <TableRow className="hover:bg-muted/50 dark:hover:bg-slate-800/50">
-                        <TableHead>Título</TableHead>
+                      <TableHead>Título</TableHead>
                         <TableHead className="text-right w-[220px]">Horario</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {events.slice(0, 5).map((event) => (
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {events.slice(0, 5).map((event) => (
                         <TableRow key={event.id} className="hover:bg-muted/50 dark:hover:bg-slate-800/50">
                           <TableCell className="font-medium">{event.summary}</TableCell>
                           <TableCell className="text-muted-foreground dark:text-slate-400 text-right">
                             {formatDate(event.start.dateTime)} - {formatDate(event.end.dateTime)}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
-        </Tabs>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+      </Tabs>
       </div>
     </div>
   );
