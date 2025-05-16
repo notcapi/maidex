@@ -120,7 +120,9 @@ export class EmailAgent {
         `To: ${toArray.join(', ')}`,
         `Subject: ${options.subject}`,
         // Importante: añadir cabecera MIME-Version para compatibilidad
-        'MIME-Version: 1.0'
+        'MIME-Version: 1.0',
+        // Añadir FROM para asegurar que se remite correctamente
+        `From: me`
       ];
       
       // Añadir CC y BCC si existen
@@ -240,25 +242,41 @@ export class EmailAgent {
         .replace(/\//g, '_')
         .replace(/=+$/, '');
       
-      // Parámetros adicionales para asegurar que se guarde en Enviados
+      // Parámetros para enviar el email y asegurar que se guarde en Enviados
       const requestParams = {
         auth,
         userId: 'me',
         requestBody: {
-          raw: encodedEmail,
-          // Asegurar que se guarde en Enviados
-          labelIds: ['SENT']
+          raw: encodedEmail
         }
       };
       
       console.log('Enviando correo con parámetros:', JSON.stringify(
-        { userId: requestParams.userId, labels: requestParams.requestBody.labelIds }, 
+        { userId: requestParams.userId }, 
         null, 
         2
       ));
       
       // Enviar el correo
       const response = await this.gmail.users.messages.send(requestParams);
+      
+      // Después de enviar, asegurarse de que el correo esté etiquetado como SENT
+      // Algunos clientes no lo hacen automáticamente
+      if (response.data && response.data.id) {
+        try {
+          await this.gmail.users.messages.modify({
+            auth,
+            userId: 'me',
+            id: response.data.id,
+            requestBody: {
+              addLabelIds: ['SENT']
+            }
+          });
+          console.log(`Correo ${response.data.id} etiquetado como SENT`);
+        } catch (labelError) {
+          console.error('Error al etiquetar el correo como SENT:', labelError);
+        }
+      }
       
       console.log('Correo enviado correctamente:', response.data.id);
       console.log('Respuesta completa:', JSON.stringify(response.data, null, 2));
