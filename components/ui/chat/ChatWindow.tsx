@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, memo } from "react";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 import { motion, AnimatePresence } from "framer-motion";
@@ -28,7 +28,8 @@ const dateVariants = {
   animate: { opacity: 1, y: 0, transition: { duration: 0.3 } }
 };
 
-export function ChatWindow({
+// Memorizamos el componente para mejorar el rendimiento
+export const ChatWindow = memo(function ChatWindow({
   children,
   className,
   autoScroll = true,
@@ -37,6 +38,7 @@ export function ChatWindow({
   const scrollRef = useRef<HTMLDivElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const [showScrollButton, setShowScrollButton] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
 
   // Función para desplazarse hasta el final de los mensajes
   const scrollToBottom = () => {
@@ -54,6 +56,22 @@ export function ChatWindow({
       setShowScrollButton(scrollHeight - scrollTop - clientHeight > 300);
     }
   };
+
+  // Optimización para mejorar el rendimiento en la renderización de mensajes
+  const throttledHandleScroll = React.useCallback(() => {
+    let timeout: ReturnType<typeof setTimeout>;
+    return () => {
+      if (!timeout) {
+        timeout = setTimeout(() => {
+          handleScroll();
+          timeout = setTimeout(() => {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => null, 0);
+          }, 100);
+        }, 100);
+      }
+    };
+  }, []);
 
   // Agrupar mensajes por fecha
   const groupMessagesByDate = () => {
@@ -102,18 +120,28 @@ export function ChatWindow({
   // Desplazarse al final cuando se añadan nuevos mensajes o cambie el estado de carga
   useEffect(() => {
     if (autoScroll) {
-      scrollToBottom();
+      // Añadimos un pequeño retraso para asegurar que el DOM se ha actualizado
+      const timer = setTimeout(() => {
+        scrollToBottom();
+      }, 100);
+      return () => clearTimeout(timer);
     }
   }, [children, isLoading, autoScroll]);
 
-  // Aplicar evento de scroll
+  // Efecto de fade-in cuando el componente se monta
+  useEffect(() => {
+    setIsVisible(true);
+  }, []);
+
+  // Aplicar evento de scroll con throttling para mejor rendimiento
   useEffect(() => {
     const scrollArea = scrollRef.current;
     if (scrollArea) {
-      scrollArea.addEventListener("scroll", handleScroll);
-      return () => scrollArea.removeEventListener("scroll", handleScroll);
+      const throttled = throttledHandleScroll();
+      scrollArea.addEventListener("scroll", throttled);
+      return () => scrollArea.removeEventListener("scroll", throttled);
     }
-  }, []);
+  }, [throttledHandleScroll]);
   
   // Agrupar los mensajes por fecha
   const messageGroups = groupMessagesByDate();
@@ -122,7 +150,11 @@ export function ChatWindow({
     <div className={cn("relative h-full w-full", className)}>
       <div 
         ref={scrollRef} 
-        className="h-full overflow-y-auto pr-2 md:pr-4 pb-safe pt-4 md:pt-6 scroll-smooth"
+        className={cn(
+          "h-full overflow-y-auto pr-2 md:pr-4 pb-safe pt-4 md:pt-6 scroll-smooth",
+          "transition-opacity duration-300",
+          isVisible ? "opacity-100" : "opacity-0"
+        )}
         onScroll={handleScroll}
       >
         <div className="flex flex-col px-1 md:px-2 min-h-full">
@@ -197,4 +229,4 @@ export function ChatWindow({
       </AnimatePresence>
     </div>
   );
-} 
+}); 

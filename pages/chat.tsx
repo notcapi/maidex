@@ -11,6 +11,7 @@ import { ChatBubble, ChatWindow, ChatInput } from '@/components/ui/chat';
 import { DriveFileList } from '@/components/drive';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { RefreshCcw, Zap } from 'lucide-react';
+import { useChatStream, Message as ChatMessage } from '@/hooks/useChatStream';
 
 // Añadir este tipo para el manejo de archivos de Drive
 type DriveFileInfo = {
@@ -22,44 +23,41 @@ type DriveFileInfo = {
   downloadUrl?: string;      // URL para descargar el archivo
 };
 
-type Message = {
-  id: number;
-  content: string;
-  isUser: boolean;
-  timestamp: Date;
-  action?: 'send_email' | 'create_event' | 'gdrive_operations';
-  // Añadir campos para archivos de Drive
-  driveFiles?: DriveFileInfo[];
-  fileId?: string;
-};
-
 export default function Chat() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const messagesEndRef = useRef<null | HTMLDivElement>(null);
   const { toast } = useToast();
+  
+  // Obtener el ID de conversación de la URL o generar uno único si no existe
+  const conversationId = Array.isArray(router.query.id) 
+    ? router.query.id[0] 
+    : router.query.id || `conversation-${Date.now()}`;
+  
+  // Usar el hook de chat en tiempo real
+  const { 
+    messages, 
+    isLoading: chatLoading, 
+    error: chatError, 
+    addMessage 
+  } = useChatStream({ 
+    conversationId,
+    initialMessages: [{
+      id: 1,
+      content: 'Hola, soy tu asistente personal. ¿En qué puedo ayudarte hoy? Puedo enviar correos electrónicos o crear eventos en tu calendario.',
+      isUser: false,
+      timestamp: new Date()
+    }] 
+  });
 
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/login');
-    } else if (status === 'authenticated') {
-      // Mensaje de bienvenida cuando se carga la página
-      if (messages.length === 0) {
-        setMessages([
-          {
-            id: 1,
-            content: 'Hola, soy tu asistente personal. ¿En qué puedo ayudarte hoy? Puedo enviar correos electrónicos o crear eventos en tu calendario.',
-            isUser: false,
-            timestamp: new Date()
-          }
-        ]);
-      }
     }
-  }, [status, router, messages.length]);
+  }, [status, router]);
 
   useEffect(() => {
     scrollToBottom();
@@ -130,38 +128,16 @@ export default function Chat() {
     try {
       setLoading(true);
       
-      // Llamar al endpoint para reiniciar la conversación
-      const response = await fetch('/api/chat-reset', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      });
-
-      const result = await response.json();
+      // Generar una nueva ID de conversación
+      const newConversationId = `conversation-${Date.now()}`;
       
-      if (result.success) {
-        // Reiniciar mensajes en el cliente
-        setMessages([
-          {
-            id: 1,
-            content: 'Hola, soy tu asistente personal. ¿En qué puedo ayudarte hoy? Puedo enviar correos electrónicos o crear eventos en tu calendario.',
-            isUser: false,
-            timestamp: new Date()
-          }
-        ]);
-        
-        toast({
-          title: "Conversación reiniciada",
-          description: "Se ha reiniciado la conversación"
-        });
-      } else {
-        toast({
-          title: "Error",
-          description: result.error || "No se pudo reiniciar la conversación",
-          variant: "destructive"
-        });
-      }
+      // Redirigir a una nueva conversación
+      router.push(`/chat?id=${newConversationId}`);
+      
+      toast({
+        title: "Conversación reiniciada",
+        description: "Se ha reiniciado la conversación"
+      });
     } catch (error) {
       console.error('Error al reiniciar la conversación:', error);
       toast({
@@ -193,16 +169,13 @@ export default function Chat() {
     
     const actionType = detectAction(value);
     
-    // Añadir mensaje del usuario
-    const userMessage: Message = {
-      id: messages.length + 1,
+    // Añadir mensaje del usuario usando addMessage del hook
+    addMessage({
       content: value,
       isUser: true,
-      timestamp: new Date(),
       action: actionType as 'send_email' | 'create_event' | 'gdrive_operations' | undefined
-    };
+    });
     
-    setMessages(prev => [...prev, userMessage]);
     setInput('');
     
     // Procesar el mensaje y generar respuesta
@@ -229,6 +202,8 @@ export default function Chat() {
           description: "Por favor, espera un momento",
         });
         
+        setLoading(true);
+        
         const response = await fetch('/api/mcp-action', {
           method: 'POST',
           headers: {
@@ -236,7 +211,8 @@ export default function Chat() {
           },
           body: JSON.stringify({ 
             text: messageText, 
-            action: actionType 
+            action: actionType,
+            conversationId // Añadir ID de conversación para persistencia
           })
         });
 
@@ -247,88 +223,79 @@ export default function Chat() {
           
           if (actionType === 'send_email') {
             responseMessage = `He enviado un correo a ${result.params.to.join(', ')} con el asunto "${result.params.subject}".`;
-            toast({
-              title: "Correo enviado",
-              description: `A: ${result.params.to.join(', ')}`,
-            });
-          } else if (actionType === 'create_event') {
-            const startTime = new Date(result.params.start).toLocaleString();
-            responseMessage = `He creado un evento titulado "${result.params.summary}" para el ${startTime}.`;
-            toast({
-              title: "Evento creado",
-              description: `${result.params.summary} - ${startTime}`,
-            });
-          } else if (actionType === 'gdrive_operations') {
-            // Procesar operaciones de Drive, pasando el flag de descarga
-            handleDriveOperationResponse(result, isDownloadRequest);
-            return; // Las operaciones de Drive añaden sus propios mensajes
-          }
-
-          // Añadir respuesta del sistema
-          setMessages(prevMessages => [
-            ...prevMessages, 
-            {
-              id: prevMessages.length + 2,
+            
+            // Añadir respuesta del asistente usando addMessage del hook
+            addMessage({
               content: responseMessage,
-              isUser: false,
-              timestamp: new Date()
-            }
-          ]);
+              isUser: false
+            });
+            
+          } else if (actionType === 'create_event') {
+            responseMessage = `He creado el evento "${result.params.title}" para el ${new Date(result.params.start).toLocaleString('es', {
+              weekday: 'long',
+              day: 'numeric',
+              month: 'long',
+              hour: 'numeric',
+              minute: 'numeric'
+            })}.`;
+            
+            // Añadir respuesta del asistente usando addMessage del hook
+            addMessage({
+              content: responseMessage,
+              isUser: false
+            });
+            
+          } else if (actionType === 'gdrive_operations') {
+            // Manejar operaciones de Google Drive
+            handleDriveOperationResponse(result, isDownloadRequest);
+          }
+          
         } else {
-          // Mejorar el manejo de errores con mensajes más específicos
+          // Manejar error
           handleErrorResponse(result);
         }
       } else {
-        // Conversación general (sin acciones específicas)
-        const response = await fetch('/api/chat', {
+        // Procesar mensaje general sin acción específica
+        setLoading(true);
+        
+        const response = await fetch('/api/mcp', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ message: messageText })
+          body: JSON.stringify({ 
+            text: messageText,
+            conversationId // Añadir ID de conversación para persistencia 
+          })
         });
-
+        
         const result = await response.json();
         
-        // Añadir respuesta del asistente
-        setMessages(prevMessages => [
-          ...prevMessages, 
-          {
-            id: prevMessages.length + 2,
-            content: result.message || result.error || 'Lo siento, ocurrió un error',
-            isUser: false,
-            timestamp: new Date()
-          }
-        ]);
+        if (result.success) {
+          // Añadir respuesta del asistente usando addMessage del hook
+          addMessage({
+            content: result.response,
+            isUser: false
+          });
+        } else {
+          // Manejar error
+          handleErrorResponse(result);
+        }
       }
     } catch (error) {
-      console.error('Error al procesar mensaje:', error);
+      console.error('Error procesando el mensaje:', error);
       
-      const errorMsg = error instanceof Error ? error.message : String(error);
-      const isOverloaded = errorMsg.includes("Overloaded") || 
-                           errorMsg.includes("529") || 
-                           errorMsg.includes("sobrecargado");
-      
-      toast({
-        title: isOverloaded ? "Servicio no disponible" : "Error",
-        description: isOverloaded ? 
-          "Los servidores están ocupados en este momento. Intenta más tarde." : 
-          "No se pudo procesar tu solicitud",
-        variant: "destructive",
+      // Añadir mensaje de error usando addMessage del hook
+      addMessage({
+        content: "Lo siento, ha ocurrido un error al procesar tu solicitud. Por favor, inténtalo de nuevo.",
+        isUser: false
       });
       
-      // Añadir mensaje de error
-      setMessages(prevMessages => [
-        ...prevMessages, 
-        {
-          id: prevMessages.length + 2,
-          content: isOverloaded ? 
-            'Lo siento, el servicio está sobrecargado en este momento. Por favor, inténtalo de nuevo en unos minutos.' : 
-            'Lo siento, ocurrió un error al procesar tu solicitud. Por favor, inténtalo de nuevo.',
-          isUser: false,
-          timestamp: new Date()
-        }
-      ]);
+      toast({
+        title: "Error",
+        description: "No se pudo procesar tu solicitud",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }
@@ -366,8 +333,8 @@ export default function Chat() {
       });
     };
     
-    // Operación de listado
-    if (result.params.operation === 'list') {
+    // Para listar archivos
+    if (result.action === 'list_files') {
       const fileCount = result.result.files?.length || 0;
       const fileList = result.result.files?.map((file: any) => `- ${file.name}`).join('\n');
       responseMessage = `He encontrado ${fileCount} archivos en tu Google Drive:`;
@@ -381,22 +348,17 @@ export default function Chat() {
       });
       
       // Añadir respuesta del sistema con la lista de archivos
-      setMessages(prevMessages => [
-        ...prevMessages, 
-        {
-          id: prevMessages.length + 2,
-          content: responseMessage,
-          isUser: false,
-          timestamp: new Date(),
-          driveFiles: driveFiles
-        }
-      ]);
+      addMessage({
+        content: responseMessage,
+        isUser: false,
+        driveFiles: driveFiles
+      });
       
       return;
-    } 
+    }
     
-    // Operación de búsqueda
-    if (result.params.operation === 'search') {
+    // Para buscar archivos
+    if (result.action === 'search_files') {
       const fileCount = result.result.files?.length || 0;
       const fileList = result.result.files?.map((file: any) => `- ${file.name}`).join('\n');
       responseMessage = `He encontrado ${fileCount} archivos que coinciden con tu búsqueda:`;
@@ -410,22 +372,17 @@ export default function Chat() {
       });
       
       // Añadir respuesta del sistema con los resultados de búsqueda
-      setMessages(prevMessages => [
-        ...prevMessages, 
-        {
-          id: prevMessages.length + 2,
-          content: responseMessage,
-          isUser: false,
-          timestamp: new Date(),
-          driveFiles: driveFiles
-        }
-      ]);
+      addMessage({
+        content: responseMessage,
+        isUser: false,
+        driveFiles: driveFiles
+      });
       
       return;
     }
     
-    // Obtener un archivo
-    if (result.params.operation === 'get') {
+    // Para descargar un archivo
+    if (result.action === 'get_file' && showDownload) {
       responseMessage = `He recuperado el archivo "${result.result.file?.name || 'solicitado'}"`;
       
       // Preparar la información del archivo para mostrarla adecuadamente
@@ -448,57 +405,20 @@ export default function Chat() {
       });
       
       // Añadir respuesta del sistema con el archivo que puede descargarse
-      setMessages(prevMessages => [
-        ...prevMessages, 
-        {
-          id: prevMessages.length + 2,
-          content: responseMessage,
-          isUser: false,
-          timestamp: new Date(),
-          driveFiles: driveFiles
-        }
-      ]);
+      addMessage({
+        content: responseMessage,
+        isUser: false,
+        driveFiles: driveFiles
+      });
       
       return;
     }
     
-    // Otras operaciones
-    if (result.params.operation === 'create') {
-      responseMessage = `He creado el archivo "${result.params.name}"`;
-      toast({
-        title: "Archivo creado",
-        description: result.params.name,
-      });
-    } else if (result.params.operation === 'update') {
-      responseMessage = `He actualizado el archivo "${result.result.file?.name || result.params.fileId}"`;
-      toast({
-        title: "Archivo actualizado",
-        description: result.result.file?.name || result.params.fileId,
-      });
-    } else if (result.params.operation === 'delete') {
-      responseMessage = `He eliminado el archivo correctamente`;
-      toast({
-        title: "Archivo eliminado",
-        description: "Operación completada",
-      });
-    } else {
-      responseMessage = `He completado la operación de Google Drive "${result.params.operation}"`;
-      toast({
-        title: "Operación completada",
-        description: `${result.params.operation}`,
-      });
-    }
-    
-    // Añadir respuesta del sistema
-    setMessages(prevMessages => [
-      ...prevMessages, 
-      {
-        id: prevMessages.length + 2,
-        content: responseMessage,
-        isUser: false,
-        timestamp: new Date()
-      }
-    ]);
+    // Añadir respuesta del sistema para otros casos
+    addMessage({
+      content: responseMessage,
+      isUser: false
+    });
   };
   
   // Función para manejar respuestas de error
@@ -514,17 +434,12 @@ export default function Chat() {
       variant: "destructive",
     });
     
-    setMessages(prevMessages => [
-      ...prevMessages, 
-      {
-        id: prevMessages.length + 2,
-        content: isOverloaded ? 
-          `Lo siento, el servicio de Claude está sobrecargado en este momento. ${result.params ? 'He intentado procesar tu solicitud con un método alternativo.' : 'Por favor, inténtalo de nuevo en unos minutos.'}` :
-          `Lo siento, no pude completar la acción: ${errorMsg}`,
-        isUser: false,
-        timestamp: new Date()
-      }
-    ]);
+    addMessage({
+      content: isOverloaded ? 
+        `Lo siento, el servicio de Claude está sobrecargado en este momento. ${result.params ? 'He intentado procesar tu solicitud con un método alternativo.' : 'Por favor, inténtalo de nuevo en unos minutos.'}` :
+        `Lo siento, no pude completar la acción: ${errorMsg}`,
+      isUser: false
+    });
   };
 
   if (status === 'loading') {
