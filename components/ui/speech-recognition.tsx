@@ -3,115 +3,156 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+
+// Definir interfaces para tipos más precisos
+interface SpeechRecognitionEvent {
+  resultIndex: number;
+  results: {
+    isFinal: boolean;
+    [index: number]: {
+      transcript: string;
+    };
+  }[];
+}
+
+interface SpeechRecognitionErrorEvent {
+  error: string;
+  message: string;
+}
+
+interface SpeechRecognitionInstance {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  start: () => void;
+  stop: () => void;
+  abort: () => void;
+  onstart: () => void;
+  onresult: (event: SpeechRecognitionEvent) => void;
+  onerror: (event: SpeechRecognitionErrorEvent) => void;
+  onend: () => void;
+}
 
 interface SpeechRecognitionProps {
   onTranscript: (text: string) => void;
   onListening?: (isListening: boolean) => void;
   placeholder?: string;
+  language?: string;
 }
 
+/**
+ * Componente de reconocimiento de voz que utiliza la API Web Speech para
+ * convertir audio en texto y enviarlo a través del prop onTranscript.
+ * 
+ * @param onTranscript - Función para recibir el texto transcrito
+ * @param onListening - Función opcional para notificar el estado de grabación
+ * @param placeholder - Texto de marcador de posición (no usado actualmente)
+ * @param language - Código de idioma (por defecto 'es-ES')
+ */
 export function SpeechRecognition({
   onTranscript,
   onListening,
-  placeholder = "Habla ahora..."
+  placeholder = "Habla ahora...",
+  language = 'es-ES'
 }: SpeechRecognitionProps) {
   const [isListening, setIsListening] = useState(false);
   const [isSupported, setIsSupported] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
   // Referencia al objeto de reconocimiento de voz
-  const recognitionRef = useRef<any>(null);
+  const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   // Acumulador de transcripción
   const accumulatedTranscriptRef = useRef("");
+  // Variable para controlar si la transcripción final ya se envió
+  const finalTranscriptSentRef = useRef(false);
 
   // Inicializar reconocimiento de voz
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        // Comprobar soporte de navegador
-        const SpeechRecognition = 
-          window.SpeechRecognition || 
-          (window as any).webkitSpeechRecognition;
-        
-        if (!SpeechRecognition) {
-          console.error("API de reconocimiento de voz no soportada");
-          setIsSupported(false);
-          setError("Tu navegador no soporta reconocimiento de voz");
-          return;
-        }
-
-        recognitionRef.current = new SpeechRecognition();
-        const recognition = recognitionRef.current;
-        
-        recognition.continuous = true;
-        recognition.interimResults = true;
-        recognition.lang = 'es-ES';
-        
-        // Configurar eventos
-        recognition.onstart = () => {
-          console.log("Reconocimiento iniciado");
-          setIsListening(true);
-          if (onListening) onListening(true);
-          // Reiniciar transcripción acumulada
-          accumulatedTranscriptRef.current = "";
-        };
-        
-        recognition.onresult = (event: any) => {
-          console.log("Resultado recibido", event);
-          
-          let interimTranscript = '';
-          let finalTranscript = '';
-          
-          for (let i = event.resultIndex; i < event.results.length; i++) {
-            const transcript = event.results[i][0].transcript;
-            if (event.results[i].isFinal) {
-              finalTranscript += transcript;
-            } else {
-              interimTranscript += transcript;
-            }
-          }
-          
-          // Actualizar transcripción acumulada con resultados finales
-          if (finalTranscript) {
-            accumulatedTranscriptRef.current += finalTranscript;
-          }
-          
-          // Si hay resultado final, enviarlo al textarea
-          if (finalTranscript) {
-            console.log("Enviando transcripción final:", accumulatedTranscriptRef.current);
-            onTranscript(accumulatedTranscriptRef.current);
-          }
-        };
-        
-        recognition.onerror = (event: any) => {
-          console.error('Error en reconocimiento de voz:', event.error);
-          setError(`Error: ${event.error}`);
-          setIsListening(false);
-          if (onListening) onListening(false);
-        };
-        
-        recognition.onend = () => {
-          console.log("Reconocimiento finalizado");
-          setIsListening(false);
-          if (onListening) onListening(false);
-          
-          // Cuando termina, enviar la transcripción si hay algo y no se ha enviado ya
-          if (accumulatedTranscriptRef.current && !finalTranscript) {
-            console.log("Enviando transcripción final al terminar:", accumulatedTranscriptRef.current);
-            onTranscript(accumulatedTranscriptRef.current);
-          }
-        };
-        
-      } catch (error) {
-        console.error("Error inicializando reconocimiento de voz:", error);
+    if (typeof window === 'undefined') return; // No ejecutar en SSR
+    
+    try {
+      // Comprobar soporte de navegador
+      const SpeechRecognition = 
+        window.SpeechRecognition || 
+        (window as any).webkitSpeechRecognition;
+      
+      if (!SpeechRecognition) {
+        console.error("API de reconocimiento de voz no soportada");
         setIsSupported(false);
-        setError("Error al inicializar reconocimiento de voz");
+        setError("Tu navegador no soporta reconocimiento de voz");
+        return;
       }
-    }
 
-    let finalTranscript = false;
+      recognitionRef.current = new SpeechRecognition() as SpeechRecognitionInstance;
+      const recognition = recognitionRef.current;
+      
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = language;
+      
+      // Configurar eventos
+      recognition.onstart = () => {
+        console.log("Reconocimiento iniciado");
+        setIsListening(true);
+        if (onListening) onListening(true);
+        // Reiniciar transcripción acumulada
+        accumulatedTranscriptRef.current = "";
+        finalTranscriptSentRef.current = false;
+      };
+      
+      recognition.onresult = (event: SpeechRecognitionEvent) => {
+        let interimTranscript = '';
+        let finalTranscript = '';
+        
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const transcript = event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            finalTranscript += transcript;
+          } else {
+            interimTranscript += transcript;
+          }
+        }
+        
+        // Actualizar transcripción acumulada con resultados finales
+        if (finalTranscript) {
+          accumulatedTranscriptRef.current += finalTranscript;
+        }
+        
+        // Si hay resultado final, enviarlo al textarea
+        if (finalTranscript) {
+          console.log("Enviando transcripción final:", accumulatedTranscriptRef.current);
+          onTranscript(accumulatedTranscriptRef.current);
+          finalTranscriptSentRef.current = true;
+        }
+      };
+      
+      recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+        console.error('Error en reconocimiento de voz:', event.error);
+        const errorMessage = getErrorMessage(event.error);
+        setError(errorMessage);
+        setIsListening(false);
+        if (onListening) onListening(false);
+      };
+      
+      recognition.onend = () => {
+        console.log("Reconocimiento finalizado");
+        setIsListening(false);
+        if (onListening) onListening(false);
+        
+        // Cuando termina, enviar la transcripción acumulada si existe y no se ha enviado ya
+        if (accumulatedTranscriptRef.current && !finalTranscriptSentRef.current) {
+          console.log("Enviando transcripción final al terminar:", accumulatedTranscriptRef.current);
+          onTranscript(accumulatedTranscriptRef.current);
+        }
+      };
+      
+    } catch (error) {
+      console.error("Error inicializando reconocimiento de voz:", error);
+      setIsSupported(false);
+      setError("Error al inicializar reconocimiento de voz");
+    }
     
     return () => {
       // Limpiar al desmontar
@@ -123,7 +164,27 @@ export function SpeechRecognition({
         }
       }
     };
-  }, [onListening, onTranscript]);
+  }, [language, onListening, onTranscript]);
+
+  // Función para interpretar errores de reconocimiento de voz
+  const getErrorMessage = (errorType: string): string => {
+    switch (errorType) {
+      case 'no-speech':
+        return "No se detectó audio. Por favor, habla más fuerte.";
+      case 'audio-capture':
+        return "No se pudo acceder al micrófono. Revisa los permisos.";
+      case 'not-allowed':
+        return "No se permitió el acceso al micrófono. Revisa los permisos del navegador.";
+      case 'network':
+        return "Error de red. Comprueba tu conexión.";
+      case 'aborted':
+        return "Reconocimiento de voz cancelado.";
+      case 'language-not-supported':
+        return `El idioma "${language}" no es soportado.`;
+      default:
+        return `Error: ${errorType}`;
+    }
+  };
 
   // Manejar inicio/parada manual
   const toggleListening = useCallback(() => {
@@ -142,8 +203,9 @@ export function SpeechRecognition({
       } else {
         // Iniciar grabación
         console.log("Iniciando grabación...");
-        // Reiniciar el acumulador
+        // Reiniciar el acumulador y flag
         accumulatedTranscriptRef.current = "";
+        finalTranscriptSentRef.current = false;
         recognitionRef.current.start();
       }
     } catch (err) {
@@ -262,7 +324,7 @@ export function SpeechRecognition({
 // Tipo para el objeto global de window
 declare global {
   interface Window {
-    SpeechRecognition?: typeof SpeechRecognition;
-    webkitSpeechRecognition?: typeof SpeechRecognition;
+    SpeechRecognition?: any;
+    webkitSpeechRecognition?: any;
   }
 } 

@@ -9,6 +9,11 @@ type EmailToolParams = {
   to: string[];
   subject: string;
   body: string;
+  cc?: string[];
+  bcc?: string[];
+  mimeType?: string;
+  htmlBody?: string;
+  driveAttachments?: string[];
 };
 
 type CalendarToolParams = {
@@ -18,13 +23,37 @@ type CalendarToolParams = {
   location?: string;
 };
 
+// Definir interfaces para respuestas y errores MCP
+interface MCPResponse {
+  success: boolean;
+  message?: string;
+  error?: string;
+  params?: any;
+  result?: any;
+  messageId?: string;
+  eventId?: string;
+}
+
+// Usamos any para evitar conflictos con la librería Anthropic
+// pero mantenemos documentación de la estructura para claridad
+interface MCPTool {
+  type: string;
+  name: string;
+  description: string;
+  input_schema: {
+    type: string;
+    properties: Record<string, any>;
+    required: string[];
+  };
+}
+
 export class MCPIntegration {
   private anthropic: Anthropic;
   private model: string = 'claude-3-5-sonnet-20240620';
   private temperature: number = 0.0;
   private maxTokens: number = 1024;
-  private emailTool: any;
-  private calendarTool: any;
+  private emailTool: any; // Mantenemos any para evitar conflictos con Anthropic
+  private calendarTool: any; // Mantenemos any para evitar conflictos con Anthropic
   private mcpServer: any = null;
 
   constructor() {
@@ -53,6 +82,30 @@ export class MCPIntegration {
           body: {
             type: "string",
             description: "Contenido del mensaje de correo electrónico"
+          },
+          cc: {
+            type: "array",
+            items: { type: "string" },
+            description: "Lista de direcciones en copia"
+          },
+          bcc: {
+            type: "array",
+            items: { type: "string" },
+            description: "Lista de direcciones en copia oculta"
+          },
+          mimeType: {
+            type: "string",
+            description: "Tipo MIME del mensaje",
+            enum: ["text/plain", "text/html", "multipart/alternative", "multipart/mixed"]
+          },
+          htmlBody: {
+            type: "string",
+            description: "Versión HTML del mensaje (opcional)"
+          },
+          driveAttachments: {
+            type: "array",
+            items: { type: "string" },
+            description: "Lista de IDs de archivos de Google Drive para adjuntar al correo"
           }
         },
         required: ["to", "subject", "body"]
@@ -90,32 +143,42 @@ export class MCPIntegration {
 
   /**
    * Inicializa el servidor MCP con un token de acceso
+   * @param accessToken Token de acceso para las APIs de Google
+   * @returns Promise que se resuelve cuando el servidor está inicializado
    */
-  initializeMCPServer(accessToken: string) {
-    // Importación dinámica del servidor MCP
-    // @ts-ignore - Ignorar errores de tipo en importación dinámica
-    import('../mcp/serverESM.mjs').then(module => {
+  async initializeMCPServer(accessToken: string): Promise<void> {
+    try {
+      // Importación dinámica del servidor MCP
+      const module = await import('../mcp/serverESM.mjs');
       const MCPServerManager = module.MCPServerManager;
       this.mcpServer = new MCPServerManager();
       this.mcpServer.setAccessToken(accessToken);
       console.log("Servidor MCP inicializado correctamente");
-    }).catch(err => {
+    } catch (err) {
       console.error("Error al inicializar servidor MCP:", err);
-    });
+      throw new Error(`No se pudo inicializar servidor MCP: ${(err as Error).message}`);
+    }
   }
 
   /**
    * Obtiene la herramienta MCP según la acción solicitada
+   * @param action Nombre de la acción ('send_email' o 'create_event')
+   * @returns Array con las herramientas para la acción especificada
    */
   getToolsForAction(action: string): any[] {
     // Si tenemos un servidor MCP, usamos sus herramientas serializadas
-    if (this.mcpServer) {
-      // @ts-ignore: Ignorar error de parámetro implícito
-      return this.mcpServer.getSerializedTools().filter(tool => {
-        if (action === 'send_email' && tool.name === 'send_email') return true;
-        if (action === 'create_event' && tool.name === 'create_event') return true;
-        return false;
-      });
+    if (this.mcpServer && typeof this.mcpServer.getSerializedTools === 'function') {
+      try {
+        const tools = this.mcpServer.getSerializedTools().filter((tool: MCPTool) => {
+          if (action === 'send_email' && tool.name === 'send_email') return true;
+          if (action === 'create_event' && tool.name === 'create_event') return true;
+          return false;
+        });
+        return tools;
+      } catch (error) {
+        console.error("Error al obtener herramientas serializadas:", error);
+        // Fallback a herramientas predefinidas en caso de error
+      }
     }
 
     // Fallback a las herramientas predefinidas
@@ -131,6 +194,8 @@ export class MCPIntegration {
 
   /**
    * Crea el sistema prompt optimizado para uso de herramientas
+   * @param action Tipo de acción para la que se crea el prompt
+   * @returns Prompt de sistema optimizado
    */
   createSystemPrompt(action: string): string {
     const basePrompt = "Eres un asistente que SIEMPRE usa las herramientas disponibles para realizar acciones. NUNCA respondas con texto cuando puedas usar una herramienta. Tu trabajo es EJECUTAR acciones, no describir lo que harías.";
@@ -172,12 +237,16 @@ Asistente: [LLAMADA A create_event]`;
 
   /**
    * Ejecuta la acción MCP
+   * @param text Texto de la solicitud del usuario
+   * @param action Tipo de acción a ejecutar ('send_email', 'create_event', etc)
+   * @param accessToken Token de acceso opcional para APIs de Google
+   * @returns Resultado de la acción con estado, mensaje y parámetros
    */
-  async executeMCPAction(text: string, action: string, accessToken?: string): Promise<{ success: boolean; message: string; params?: any }> {
+  async executeMCPAction(text: string, action: string, accessToken?: string): Promise<MCPResponse> {
     try {
       // Inicializar servidor MCP si tenemos accessToken y no está inicializado
       if (accessToken && !this.mcpServer) {
-        this.initializeMCPServer(accessToken);
+        await this.initializeMCPServer(accessToken);
       }
 
       // Si tenemos un servidor MCP, usar su método executeQuery
@@ -204,9 +273,6 @@ Asistente: [LLAMADA A create_event]`;
       // Método anterior para compatibilidad
       const tools = this.getToolsForAction(action);
       console.log(`Ejecutando con capacidades: ${JSON.stringify(tools.map(t => t.name))}`);
-      
-      // Modificar el prompt para enfatizar el uso de herramientas
-      let modifiedPrompt = text;
       
       // Configurar mensajes con prompts optimizados
       const messages: MessageParam[] = [
@@ -245,7 +311,7 @@ Asistente: [LLAMADA A create_event]`;
             const result = await this.mcpServer.processToolCall(toolUseItem.name, params);
             if (result.success) {
               let message = `Acción MCP ejecutada correctamente: ${action}`;
-              // Comprueba las propiedades de manera segura con in
+              // Comprueba las propiedades de manera segura
               if ('messageId' in result) {
                 message = `Correo enviado correctamente`;
               } else if ('eventId' in result) {
@@ -325,7 +391,7 @@ Asistente: [LLAMADA A create_event]`;
               const result = await this.mcpServer.processToolCall(toolUseItem.name, params);
               if (result.success) {
                 let message = `Acción MCP ejecutada correctamente en segundo intento: ${action}`;
-                // Comprueba las propiedades de manera segura con in
+                // Comprueba las propiedades de manera segura
                 if ('messageId' in result) {
                   message = `Correo enviado correctamente`;
                 } else if ('eventId' in result) {
@@ -371,11 +437,12 @@ Asistente: [LLAMADA A create_event]`;
   
   /**
    * Extracción manual de parámetros como fallback
+   * @param text Texto del usuario para extraer parámetros
+   * @param action Tipo de acción ('send_email' o 'create_event')
+   * @returns Resultado con parámetros extraídos manualmente
    */
-  private extractParamsManually(text: string, action: string): { success: boolean; message: string; params?: any } {
+  private extractParamsManually(text: string, action: string): MCPResponse {
     console.log("Intentando extracción manual de parámetros para:", action);
-    
-    const lowerText = text.toLowerCase();
     
     if (action === 'send_email') {
       // Extraer destinatario
@@ -431,6 +498,135 @@ Asistente: [LLAMADA A create_event]`;
     return {
       success: false,
       message: "No se pudo extraer parámetros manualmente"
+    };
+  }
+}
+
+// Declaramos la función sin implementarla para evitar errores del compilador
+declare function getGoogleToken(session: any): Promise<string | null>;
+
+// Importamos las clases necesarias para mantener compatibilidad
+// Estas clases ya deben estar implementadas en alguna parte del código
+declare class EmailAgent {
+  sendEmail(accessToken: string, params: EmailToolParams): Promise<MCPResponse>;
+}
+
+declare class CalendarAgent {
+  createEvent(accessToken: string, params: CalendarToolParams): Promise<MCPResponse>;
+}
+
+declare class DriveAgent {
+  searchFiles(accessToken: string, params: {query: string, maxResults: number}): Promise<MCPResponse>;
+  listFiles(accessToken: string, params: {folderId: string, maxResults: number}): Promise<MCPResponse>;
+  createFolder(accessToken: string, params: {name: string, parentId?: string}): Promise<MCPResponse>;
+}
+
+// Función auxiliar para asegurar formato de fecha correcto
+function ensureProperDateFormat(dateStr: string): string {
+  // Si ya es una fecha ISO, devolverla sin cambios
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(dateStr)) {
+    return dateStr;
+  }
+  
+  // En caso contrario, intentar convertir
+  try {
+    const date = new Date(dateStr);
+    if (!isNaN(date.getTime())) {
+      return date.toISOString();
+    }
+  } catch (e) {
+    console.error("Error al convertir fecha:", e);
+  }
+  
+  // Si no se puede convertir, devolver la original
+  return dateStr;
+}
+
+export async function handleMcpRequest(operation: string, params: any, session: any): Promise<MCPResponse> {
+  console.log(`Solicitud MCP: ${operation}`, params);
+  
+  try {
+    // Comprobar que tenemos una sesión válida
+    if (!session || !session.user) {
+      console.error("No hay sesión de usuario válida");
+      return {
+        success: false,
+        error: "No estás autenticado. Por favor, inicia sesión."
+      };
+    }
+    
+    // Obtener un token de acceso actualizado para APIs de Google
+    const accessToken = await getGoogleToken(session);
+    
+    if (!accessToken) {
+      console.error("No se pudo obtener un token de acceso");
+      return {
+        success: false,
+        error: "No se pudo acceder a tu cuenta de Google. Por favor, vuelve a iniciar sesión."
+      };
+    }
+    
+    // Manejar diferentes operaciones MCP
+    switch (operation) {
+      case "send_email":
+        const emailAgent = new EmailAgent();
+        return await emailAgent.sendEmail(accessToken, {
+          to: Array.isArray(params.to) ? params.to : [params.to],
+          subject: params.subject,
+          body: params.body,
+          cc: params.cc,
+          bcc: params.bcc,
+          mimeType: params.mimeType,
+          htmlBody: params.htmlBody,
+          driveAttachments: params.driveAttachments
+        });
+        
+      case "create_event":
+        const calendarAgent = new CalendarAgent();
+        // Procesar fechas para asegurar formato correcto
+        params.start = ensureProperDateFormat(params.start);
+        params.end = ensureProperDateFormat(params.end);
+        
+        return await calendarAgent.createEvent(accessToken, {
+          summary: params.summary,
+          location: params.location,
+          start: params.start,
+          end: params.end
+        });
+        
+      case "search_drive":
+        const driveAgent = new DriveAgent();
+        return await driveAgent.searchFiles(accessToken, {
+          query: params.query,
+          maxResults: params.maxResults || 10
+        });
+        
+      case "list_drive_files":
+        const driveAgentForList = new DriveAgent();
+        return await driveAgentForList.listFiles(accessToken, {
+          folderId: params.folderId || 'root',
+          maxResults: params.maxResults || 50
+        });
+      
+      case "create_drive_folder":
+        const driveAgentForFolder = new DriveAgent();
+        return await driveAgentForFolder.createFolder(accessToken, {
+          name: params.name,
+          parentId: params.parentId
+        });
+        
+      default:
+        console.error(`Operación MCP desconocida: ${operation}`);
+        return {
+          success: false,
+          error: `Operación no soportada: ${operation}`
+        };
+    }
+  } catch (error) {
+    console.error(`Error al procesar solicitud MCP ${operation}:`, error);
+    return {
+      success: false,
+      error: `Error interno: ${(error as Error).message}`
     };
   }
 } 

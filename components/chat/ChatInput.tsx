@@ -1,4 +1,4 @@
-import React, { useState, useRef, KeyboardEvent, useEffect } from "react";
+import React, { useState, useRef, KeyboardEvent, useEffect, useMemo, useCallback } from "react";
 import TextareaAutosize from "react-textarea-autosize";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -18,7 +18,10 @@ interface ChatInputProps {
   initialValue?: string;
 }
 
-export function ChatInput({
+/**
+ * Componente de entrada de chat optimizado con React.memo para reducir renderizados
+ */
+export const ChatInput = React.memo(function ChatInputInner({
   placeholder = "Escribe un mensaje...",
   onSubmit,
   isLoading = false,
@@ -49,7 +52,7 @@ export function ChatInput({
     }
   }, [value]);
 
-  const handleSubmit = (e?: React.FormEvent) => {
+  const handleSubmit = useCallback((e?: React.FormEvent) => {
     if (e) e.preventDefault();
     
     if (!value.trim()) return;
@@ -61,26 +64,42 @@ export function ChatInput({
     setTimeout(() => {
       textareaRef.current?.focus();
     }, 0);
-  };
+  }, [value, onSubmit]);
 
-  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+  const handleKeyDown = useCallback((e: KeyboardEvent<HTMLTextAreaElement>) => {
     // Enviar con Enter (sin Shift)
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSubmit();
     }
-  };
+  }, [handleSubmit]);
 
-  const toggleActions = () => {
+  const toggleActions = useCallback(() => {
     setShowActions(prev => !prev);
-  };
+  }, []);
 
-  // Botones de acción rápida para mostrar en el menú 
-  const actionButtons = [
+  // Memorizar botones de acción para evitar recreación en cada render
+  const actionButtons = useMemo(() => [
     { icon: <Link1Icon className="h-4 w-4" />, label: "Enlazar Drive" },
     { icon: <FileIcon className="h-4 w-4" />, label: "Buscar archivo" },
     { icon: <ImageIcon className="h-4 w-4" />, label: "Imagen" },
-  ];
+  ], []);
+
+  // Memorizar el estado del placeholder
+  const currentPlaceholder = useMemo(() => {
+    if (isLoading) return "Procesando...";
+    if (isListening) return "Escuchando...";
+    return placeholder;
+  }, [isLoading, isListening, placeholder]);
+
+  // Función para manejar cambios en el textarea
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setValue(e.target.value);
+  }, []);
+
+  // Gestionar el focus y blur
+  const handleFocus = useCallback(() => setIsFocused(true), []);
+  const handleBlur = useCallback(() => setIsFocused(false), []);
 
   return (
     <div className={cn(
@@ -125,11 +144,11 @@ export function ChatInput({
               <TextareaAutosize
                 ref={textareaRef}
                 value={value}
-                onChange={(e) => setValue(e.target.value)}
+                onChange={handleChange}
                 onKeyDown={handleKeyDown}
-                onFocus={() => setIsFocused(true)}
-                onBlur={() => setIsFocused(false)}
-                placeholder={isLoading ? "Procesando..." : isListening ? "Escuchando..." : placeholder}
+                onFocus={handleFocus}
+                onBlur={handleBlur}
+                placeholder={currentPlaceholder}
                 disabled={isLoading || disabled}
                 className={cn(
                   "w-full resize-none bg-transparent outline-none text-foreground placeholder:text-muted-foreground/70",
@@ -244,4 +263,4 @@ export function ChatInput({
       </MotionConfig>
     </div>
   );
-} 
+}); 
