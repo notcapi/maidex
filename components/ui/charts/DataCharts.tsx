@@ -2,7 +2,10 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useTheme } from 'next-themes';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle, BarChart4, PieChart } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
+import { AlertCircle, BarChart4, PieChart, CalendarIcon, Table2, RefreshCw } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 declare global {
   interface Window {
@@ -32,14 +35,24 @@ interface DataChartsProps {
   emails?: Email[];
   events?: Event[];
   type: 'emails' | 'events';
+  className?: string;
+  onRefresh?: () => void;
 }
 
-const DataCharts: React.FC<DataChartsProps> = ({ emails, events, type }) => {
+const DataCharts: React.FC<DataChartsProps> = ({ 
+  emails, 
+  events, 
+  type, 
+  className,
+  onRefresh
+}) => {
   const chartRef = useRef<HTMLDivElement>(null);
+  const tableRef = useRef<HTMLDivElement>(null);
   const { theme, resolvedTheme } = useTheme();
   const [chartError, setChartError] = useState<string | null>(null);
   const [isGoogleAPILoaded, setIsGoogleAPILoaded] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [activeTab, setActiveTab] = useState<string>('chart');
 
   // Detectar tema actual para aplicar en los gráficos
   const isDarkMode = theme === 'dark' || resolvedTheme === 'dark';
@@ -71,7 +84,7 @@ const DataCharts: React.FC<DataChartsProps> = ({ emails, events, type }) => {
             window.charts[type === 'emails' ? 'emailsLoaded' : 'eventsLoaded'] = true;
             setIsGoogleAPILoaded(true);
             setIsLoading(false);
-            drawChart();
+            drawVisualization();
           });
         };
         script.onerror = () => {
@@ -84,7 +97,7 @@ const DataCharts: React.FC<DataChartsProps> = ({ emails, events, type }) => {
         setIsGoogleAPILoaded(true);
         window.charts[type === 'emails' ? 'emailsLoaded' : 'eventsLoaded'] = true;
         setIsLoading(false);
-        drawChart();
+        drawVisualization();
       }
     }
   }, []); // Solo cargar la API una vez
@@ -92,9 +105,9 @@ const DataCharts: React.FC<DataChartsProps> = ({ emails, events, type }) => {
   // Efecto para redibujar el gráfico cuando cambien los datos o el tema
   useEffect(() => {
     if (isGoogleAPILoaded) {
-      drawChart();
+      drawVisualization();
     }
-  }, [emails, events, type, theme, isGoogleAPILoaded, resolvedTheme]);
+  }, [emails, events, type, theme, isGoogleAPILoaded, resolvedTheme, activeTab]);
 
   // Inyectar estilos CSS para gráficos de Google en modo oscuro
   useEffect(() => {
@@ -150,20 +163,20 @@ const DataCharts: React.FC<DataChartsProps> = ({ emails, events, type }) => {
     }
   }, [isDarkMode]);
 
-  const drawChart = () => {
-    if (!chartRef.current || !window.google || !window.google.visualization) return;
-
-    try {
+  // Función central para dibujar visualizaciones según el tab activo
+  const drawVisualization = () => {
+    if (activeTab === 'chart') {
       if (type === 'emails' && emails && emails.length > 0) {
-        // Visualización de correos electrónicos
         drawEmailCharts();
       } else if (type === 'events' && events && events.length > 0) {
-        // Visualización de eventos del calendario
         drawEventCharts();
       }
-    } catch (error) {
-      console.error('Error al dibujar el gráfico:', error);
-      setChartError('Error al generar la visualización');
+    } else if (activeTab === 'table') {
+      if (type === 'emails' && emails && emails.length > 0) {
+        drawEmailTable();
+      } else if (type === 'events' && events && events.length > 0) {
+        drawEventTable();
+      }
     }
   };
 
@@ -199,47 +212,29 @@ const DataCharts: React.FC<DataChartsProps> = ({ emails, events, type }) => {
             fontSize: 12 
           }
         },
-        backgroundColor: { 
-          fill: isDarkMode ? 'hsl(var(--card))' : 'hsl(var(--card))',
-          stroke: isDarkMode ? 'hsl(var(--border))' : 'hsl(var(--border))',
-          strokeWidth: 1
-        },
+        backgroundColor: 'transparent',
         tooltip: { 
+          showColorCode: true,
           textStyle: { 
-            color: isDarkMode ? 'hsl(var(--popover-foreground))' : 'hsl(var(--popover-foreground))',
+            color: isDarkMode ? '#e1e1e1' : '#333333',  
             fontSize: 13
-          },
-          showColorCode: true
+          } 
         }
       };
 
-      // Limpiar el contenedor antes de renderizar
-      while (chartRef.current.firstChild) {
-        chartRef.current.removeChild(chartRef.current.firstChild);
-      }
-
-      // Crear el div para el gráfico de donut
-      const donutChartDiv = document.createElement('div');
-      donutChartDiv.style.width = '100%';
-      donutChartDiv.style.height = '300px';
-      donutChartDiv.style.marginBottom = '2rem';
-      chartRef.current.appendChild(donutChartDiv);
-      
-      const donutChart = new window.google.visualization.PieChart(donutChartDiv);
-      donutChart.draw(dataTable, options);
-      
-      // Crear gráfico de tabla para detalles
-      drawEmailTable();
-
+      // Renderizar gráfico
+      const chart = new window.google.visualization.PieChart(chartRef.current);
+      chart.draw(dataTable, options);
+      setChartError(null);
     } catch (error) {
-      console.error('Error en drawEmailCharts:', error);
-      setChartError('No se pudo generar el gráfico de correos');
+      console.error('Error al dibujar el gráfico de emails:', error);
+      setChartError('Error al generar la visualización de correos');
     }
   };
 
   const drawEventCharts = () => {
-    if (!events || !chartRef.current) {
-      setChartError('No hay datos para mostrar el cronograma');
+    if (!events || !chartRef.current || events.length === 0) {
+      setChartError('No hay suficientes datos para mostrar el gráfico');
       return;
     }
 
@@ -315,7 +310,7 @@ const DataCharts: React.FC<DataChartsProps> = ({ emails, events, type }) => {
   };
 
   const drawEventTable = () => {
-    if (!events || !chartRef.current || !window.google || !window.google.visualization) return;
+    if (!events || !tableRef.current || events.length === 0) return;
     
     try {
       // Crear una tabla de datos para eventos
@@ -364,7 +359,7 @@ const DataCharts: React.FC<DataChartsProps> = ({ emails, events, type }) => {
       const tableDiv = document.createElement('div');
       tableDiv.style.width = '100%';
       tableDiv.style.marginBottom = '1rem';
-      chartRef.current.appendChild(tableDiv);
+      tableRef.current.appendChild(tableDiv);
       
       // Opciones de la tabla
       const options = {
@@ -414,7 +409,7 @@ const DataCharts: React.FC<DataChartsProps> = ({ emails, events, type }) => {
   };
 
   const drawEmailTable = () => {
-    if (!emails || !chartRef.current || !window.google || !window.google.visualization) return;
+    if (!emails || !tableRef.current || emails.length === 0) return;
     
     try {
       // Crear una tabla de datos para emails
@@ -446,7 +441,7 @@ const DataCharts: React.FC<DataChartsProps> = ({ emails, events, type }) => {
       const tableDiv = document.createElement('div');
       tableDiv.style.width = '100%';
       tableDiv.style.marginBottom = '1rem';
-      chartRef.current.appendChild(tableDiv);
+      tableRef.current.appendChild(tableDiv);
       
       // Opciones de la tabla
       const options = {
@@ -474,26 +469,135 @@ const DataCharts: React.FC<DataChartsProps> = ({ emails, events, type }) => {
     }
   };
 
-  // Renderizar
+  // Mensajes de error y estados de carga
+  if (chartError && (!emails?.length || !events?.length)) {
+    return (
+      <Alert variant="destructive" className="mb-6">
+        <AlertCircle className="h-4 w-4" />
+        <AlertTitle>Error</AlertTitle>
+        <AlertDescription>
+          {chartError}
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  // Datos insuficientes
+  const noData = (type === 'emails' && (!emails || emails.length === 0)) || 
+                 (type === 'events' && (!events || events.length === 0));
+  
+  if (noData) {
+    return (
+      <Card className={className}>
+        <CardHeader>
+          <CardTitle className="text-xl flex items-center gap-2">
+            {type === 'emails' ? 'Análisis de Correos' : 'Análisis de Eventos'}
+            {type === 'emails' ? <BarChart4 className="h-5 w-5 text-muted-foreground" /> : <CalendarIcon className="h-5 w-5 text-muted-foreground" />}
+          </CardTitle>
+          <CardDescription>
+            No hay datos suficientes para mostrar estadísticas
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col items-center justify-center p-8 text-center">
+          {type === 'emails' ? (
+            <BarChart4 className="h-16 w-16 text-muted-foreground/40 mb-4" />
+          ) : (
+            <CalendarIcon className="h-16 w-16 text-muted-foreground/40 mb-4" />
+          )}
+          <p className="text-muted-foreground">No hay {type === 'emails' ? 'correos' : 'eventos'} disponibles para analizar</p>
+          {onRefresh && (
+            <Button 
+              variant="outline" 
+              onClick={onRefresh}
+              className="mt-4 flex items-center gap-2"
+            >
+              <RefreshCw className="h-4 w-4" /> 
+              Actualizar datos
+            </Button>
+          )}
+        </CardContent>
+      </Card>
+    );
+  }
+  
   return (
-    <div className="space-y-6">
-      {chartError && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{chartError}</AlertDescription>
-        </Alert>
-      )}
-      
-      {isLoading ? (
-        <div className="flex flex-col items-center justify-center p-8">
-          <div className="h-16 w-16 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
-          <p className="mt-4 text-sm text-muted-foreground">Cargando visualización...</p>
+    <Card className={className}>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-xl flex items-center gap-2">
+            {type === 'emails' ? 'Análisis de Correos' : 'Análisis de Eventos'}
+            {type === 'emails' ? <BarChart4 className="h-5 w-5 text-muted-foreground" /> : <CalendarIcon className="h-5 w-5 text-muted-foreground" />}
+          </CardTitle>
+          
+          {onRefresh && (
+            <Button 
+              variant="ghost" 
+              size="icon"
+              onClick={onRefresh}
+              className="rounded-full h-8 w-8"
+            >
+              <RefreshCw className="h-4 w-4" />
+            </Button>
+          )}
         </div>
-      ) : (
-        <div ref={chartRef} className="min-h-[400px] w-full" />
-      )}
-    </div>
+        
+        <CardDescription>
+          {type === 'emails' 
+            ? `Visualización de ${emails?.length || 0} correos recientes`
+            : `Visualización de ${events?.length || 0} eventos próximos`
+          }
+        </CardDescription>
+        
+        <Separator className="mt-2" />
+      </CardHeader>
+      
+      <CardContent className="pt-2">
+        <Tabs 
+          value={activeTab} 
+          onValueChange={setActiveTab}
+          className="w-full"
+        >
+          <TabsList className="mb-4 w-full grid grid-cols-2">
+            <TabsTrigger value="chart" className="flex items-center gap-1.5">
+              <PieChart className="h-4 w-4" />
+              <span>Gráfico</span>
+            </TabsTrigger>
+            <TabsTrigger value="table" className="flex items-center gap-1.5">
+              <Table2 className="h-4 w-4" />
+              <span>Tabla</span>
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="chart" className="mt-0 p-0">
+            {isLoading ? (
+              <div className="flex items-center justify-center p-8">
+                <div className="animate-spin h-8 w-8 border-4 border-primary/30 border-t-primary rounded-full"></div>
+              </div>
+            ) : (
+              <div 
+                ref={chartRef} 
+                className="w-full h-[350px] flex items-center justify-center"
+                aria-label={`Gráfico de ${type === 'emails' ? 'correos' : 'eventos'}`}
+              />
+            )}
+          </TabsContent>
+          
+          <TabsContent value="table" className="mt-0 p-0">
+            {isLoading ? (
+              <div className="flex items-center justify-center p-8">
+                <div className="animate-spin h-8 w-8 border-4 border-primary/30 border-t-primary rounded-full"></div>
+              </div>
+            ) : (
+              <div 
+                ref={tableRef} 
+                className="w-full overflow-x-auto"
+                aria-label={`Tabla de ${type === 'emails' ? 'correos' : 'eventos'}`}
+              />
+            )}
+          </TabsContent>
+        </Tabs>
+      </CardContent>
+    </Card>
   );
 };
 

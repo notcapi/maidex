@@ -3,8 +3,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Download } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Download, FileText, Image, FileArchive, File } from "lucide-react";
 
 type File = {
   id: string;
@@ -27,8 +27,8 @@ interface ChatBubbleProps {
 
 // Variantes de animación
 const bubbleVariants = {
-  hidden: { opacity: 0, y: 10 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.3, ease: "easeOut" } }
+  hidden: { opacity: 0, y: 10, scale: 0.98 },
+  visible: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.25, ease: "easeOut" } }
 };
 
 const attachmentVariants = {
@@ -47,6 +47,14 @@ export function ChatBubble({
 }: ChatBubbleProps) {
   const isUser = role === "user";
   const initial = userName ? userName.charAt(0).toUpperCase() : isUser ? "U" : "A";
+  
+  // Formatear mensaje si contiene saltos de línea
+  const formattedMessage = message.split('\n').map((line, i) => (
+    <React.Fragment key={i}>
+      {line}
+      {i < message.split('\n').length - 1 && <br />}
+    </React.Fragment>
+  ));
 
   // Componente de ChatBubble para el asistente
   if (!isUser) {
@@ -55,18 +63,18 @@ export function ChatBubble({
         initial="hidden"
         animate="visible"
         variants={bubbleVariants}
-        className="flex items-start space-x-3 px-4 py-2.5 mt-2 first:mt-8"
+        className="flex items-start space-x-3 px-4 py-2 mt-1 first:mt-6"
       >
-        <Avatar className="h-8 w-8 shrink-0 shadow-sm">
-          <AvatarFallback className="bg-gradient-to-br from-slate-700 to-slate-900 text-slate-100 dark:bg-slate-800 dark:text-slate-200 font-medium text-sm">
+        <Avatar className="h-8 w-8 shrink-0 border border-border/30">
+          <AvatarFallback className="bg-muted text-muted-foreground font-medium text-sm">
             {initial}
           </AvatarFallback>
         </Avatar>
         
-        <div className="flex flex-col max-w-[85%] md:max-w-[75%] w-full">
-          <div className="bg-card dark:bg-slate-900 rounded-xl rounded-tl-sm px-4 py-3 relative shadow-sm border border-border/30 dark:border-slate-700">
-            <div className="text-sm md:text-base leading-relaxed text-card-foreground dark:text-slate-200 whitespace-pre-wrap break-words">
-              {message}
+        <div className="flex flex-col max-w-[85%] md:max-w-[75%] lg:max-w-[65%] w-full">
+          <div className="bg-muted/50 dark:bg-muted/20 rounded-lg rounded-tl-sm px-4 py-3 relative shadow-sm border border-border/10">
+            <div className="text-sm md:text-base leading-relaxed text-foreground whitespace-pre-wrap break-words">
+              {formattedMessage}
             </div>
           </div>
           
@@ -74,17 +82,20 @@ export function ChatBubble({
           {files && files.length > 0 && (
             <motion.div 
               variants={attachmentVariants}
-              className="mt-2 space-y-2"
+              className="mt-2 space-y-1.5"
             >
               {files.map((file) => (
                 <div
                   key={file.id}
                   className={cn(
-                    "flex items-center text-xs rounded-lg p-2.5 bg-muted/60 dark:bg-slate-800/70 text-muted-foreground dark:text-slate-300 border border-border/30 dark:border-slate-700/50"
+                    "flex items-center rounded-md p-2 bg-muted/30 dark:bg-muted/10 text-muted-foreground border border-border/10",
+                    "hover:bg-muted/40 dark:hover:bg-muted/20 transition-colors"
                   )}
                 >
                   <FileIcon mimeType={file.mimeType} />
-                  <span className="ml-2 truncate max-w-[180px] md:max-w-[300px]">{file.name}</span>
+                  <span className="ml-2 truncate max-w-[220px] md:max-w-[300px] text-xs">
+                    {file.name}
+                  </span>
                   
                   {showDownload && file.type === 'file' && (
                     <TooltipProvider>
@@ -93,7 +104,7 @@ export function ChatBubble({
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="ml-auto h-7 w-7 rounded-full hover:bg-background dark:hover:bg-slate-700"
+                            className="ml-auto h-6 w-6 rounded-full hover:bg-background"
                             asChild
                           >
                             <a
@@ -101,12 +112,15 @@ export function ChatBubble({
                               target="_blank"
                               rel="noopener noreferrer"
                               aria-label="Descargar archivo"
+                              className="flex items-center justify-center"
                             >
                               <Download className="h-3.5 w-3.5" />
                             </a>
                           </Button>
                         </TooltipTrigger>
-                        <TooltipContent side="top">Descargar archivo</TooltipContent>
+                        <TooltipContent side="top" className="text-xs">
+                          Descargar archivo
+                        </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
                   )}
@@ -117,7 +131,7 @@ export function ChatBubble({
           
           {/* Timestamp con mejor presentación */}
           {timestamp && (
-            <time className="block mt-1 text-[11px] text-muted-foreground/60 dark:text-slate-500 text-right mr-1">
+            <time className="block mt-1 text-[10px] text-muted-foreground/50 dark:text-muted-foreground/40 text-right mr-1">
               {timestamp.toLocaleTimeString('es', { hour: "2-digit", minute: "2-digit" })}
             </time>
           )}
@@ -132,32 +146,34 @@ export function ChatBubble({
       initial="hidden"
       animate="visible"
       variants={bubbleVariants}
-      className="flex w-full max-w-full mb-4 pl-4 pr-3 gap-3 justify-end mt-2"
+      className="flex w-full max-w-full mb-1 pl-4 pr-4 gap-3 justify-end mt-1"
     >
-      <div className="flex flex-col max-w-[85%] md:max-w-[70%]">
+      <div className="flex flex-col max-w-[85%] md:max-w-[70%] lg:max-w-[60%]">
         <div
           className={cn(
-            "p-3 rounded-xl rounded-br-sm flex-1 whitespace-pre-wrap break-words",
-            "bg-primary dark:bg-primary/90 text-primary-foreground",
+            "p-3 rounded-lg rounded-br-sm flex-1 whitespace-pre-wrap break-words",
+            "bg-primary text-primary-foreground",
             "shadow-sm text-sm md:text-base leading-relaxed"
           )}
         >
-          {message}
+          {formattedMessage}
         </div>
 
         {/* Archivos adjuntos */}
         {files && files.length > 0 && (
           <motion.div 
             variants={attachmentVariants}
-            className="mt-2 space-y-2"
+            className="mt-2 space-y-1.5"
           >
             {files.map((file) => (
               <div
                 key={file.id}
-                className="flex items-center text-xs rounded-lg p-2.5 bg-primary/80 dark:bg-primary/70 text-primary-foreground"
+                className="flex items-center rounded-md p-2 bg-primary/10 dark:bg-primary/20 text-primary"
               >
                 <FileIcon mimeType={file.mimeType} />
-                <span className="ml-2 truncate max-w-[180px] md:max-w-[300px]">{file.name}</span>
+                <span className="ml-2 truncate max-w-[220px] md:max-w-[300px] text-xs">
+                  {file.name}
+                </span>
                 
                 {showDownload && file.type === 'file' && (
                   <TooltipProvider>
@@ -166,7 +182,7 @@ export function ChatBubble({
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="ml-auto h-7 w-7 rounded-full hover:bg-primary-foreground/10"
+                          className="ml-auto h-6 w-6 rounded-full hover:bg-primary/20"
                           asChild
                         >
                           <a
@@ -174,12 +190,15 @@ export function ChatBubble({
                             target="_blank"
                             rel="noopener noreferrer"
                             aria-label="Descargar archivo"
+                            className="flex items-center justify-center"
                           >
                             <Download className="h-3.5 w-3.5" />
                           </a>
                         </Button>
                       </TooltipTrigger>
-                      <TooltipContent side="top">Descargar archivo</TooltipContent>
+                      <TooltipContent side="top" className="text-xs">
+                        Descargar archivo
+                      </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
                 )}
@@ -190,15 +209,17 @@ export function ChatBubble({
 
         {/* Timestamp con mejor presentación */}
         {timestamp && (
-          <div className="text-[11px] mt-1 text-muted-foreground/60 dark:text-slate-500 text-right">
+          <div className="text-[10px] mt-1 text-muted-foreground/50 dark:text-muted-foreground/40 text-right">
             {timestamp.toLocaleTimeString('es', { hour: "2-digit", minute: "2-digit" })}
           </div>
         )}
       </div>
 
-      <Avatar className="h-8 w-8 shrink-0 shadow-sm">
+      <Avatar className="h-8 w-8 shrink-0 border border-border/30">
         <AvatarImage src={userImage} />
-        <AvatarFallback className="bg-primary/10 dark:bg-primary/20 text-primary font-medium text-sm">{initial}</AvatarFallback>
+        <AvatarFallback className="bg-primary/10 dark:bg-primary/20 text-primary font-medium text-sm">
+          {initial}
+        </AvatarFallback>
       </Avatar>
     </motion.div>
   );
@@ -206,40 +227,21 @@ export function ChatBubble({
 
 // Íconos para los diferentes tipos de archivos
 function FileIcon({ mimeType }: { mimeType: string }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="flex-shrink-0"
-    >
-      {mimeType.includes("image") ? (
-        <>
-          <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
-          <circle cx="9" cy="9" r="2" />
-          <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
-        </>
-      ) : mimeType.includes("pdf") ? (
-        <>
-          <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
-          <polyline points="14 2 14 8 20 8" />
-        </>
-      ) : mimeType.includes("folder") ? (
-        <>
-          <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z" />
-        </>
-      ) : (
-        <>
-          <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
-          <polyline points="14 2 14 8 20 8" />
-        </>
-      )}
-    </svg>
-  );
+  if (mimeType.includes("image")) {
+    return <Image className="h-4 w-4 flex-shrink-0" />;
+  }
+  
+  if (mimeType.includes("pdf")) {
+    return <FileText className="h-4 w-4 flex-shrink-0" />;
+  }
+  
+  if (mimeType.includes("folder")) {
+    return <File className="h-4 w-4 flex-shrink-0" />;
+  }
+  
+  if (mimeType.includes("zip") || mimeType.includes("archive")) {
+    return <FileArchive className="h-4 w-4 flex-shrink-0" />;
+  }
+  
+  return <File className="h-4 w-4 flex-shrink-0" />;
 } 

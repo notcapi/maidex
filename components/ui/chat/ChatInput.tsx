@@ -80,9 +80,9 @@ export const ChatInput = React.memo(function ChatInputInner({
 
   // Memorizar botones de acción para evitar recreación en cada render
   const actionButtons = useMemo(() => [
-    { icon: <Link1Icon className="h-4 w-4" />, label: "Enlazar Drive" },
-    { icon: <FileIcon className="h-4 w-4" />, label: "Buscar archivo" },
-    { icon: <ImageIcon className="h-4 w-4" />, label: "Imagen" },
+    { icon: <Link1Icon className="h-4 w-4" />, label: "Enlazar Drive", action: "link_drive" },
+    { icon: <FileIcon className="h-4 w-4" />, label: "Adjuntar archivo", action: "attach_file" },
+    { icon: <ImageIcon className="h-4 w-4" />, label: "Añadir imagen", action: "add_image" },
   ], []);
 
   // Memorizar el estado del placeholder
@@ -108,8 +108,6 @@ export const ChatInput = React.memo(function ChatInputInner({
     )}>
       <MotionConfig>
         <div className="relative w-full flex flex-col">
-          {/* Eliminamos el fondo con blur que causa problemas */}
-          
           <form
             onSubmit={handleSubmit}
             className="relative z-10 flex flex-col max-w-4xl mx-auto gap-2 w-full"
@@ -117,9 +115,9 @@ export const ChatInput = React.memo(function ChatInputInner({
             <div 
               ref={inputContainerRef}
               className={cn(
-                "relative flex flex-1 items-center overflow-hidden rounded-3xl border bg-background shadow-sm transition-all duration-200",
+                "relative flex flex-1 items-center overflow-hidden rounded-xl border bg-background shadow-sm transition-all duration-200",
                 isFocused ? "border-primary ring-2 ring-primary/20" : "border-border/50",
-                value.trim() ? "pr-20" : "pr-20"  // Cambiado de pr-14 a pr-20 para dejar espacio al botón de micrófono
+                value.trim() ? "pr-20" : "pr-20"
               )}
             >
               {/* Efecto de resplandor cuando está enfocado */}
@@ -132,8 +130,8 @@ export const ChatInput = React.memo(function ChatInputInner({
                 type="button"
                 onClick={toggleActions}
                 className={cn(
-                  "absolute left-3 top-1/2 -translate-y-1/2 md:left-4 p-2 rounded-full transition-all duration-300",
-                  "text-muted-foreground/70 hover:text-foreground hover:bg-muted",
+                  "absolute left-3 top-1/2 -translate-y-1/2 md:left-4 p-1.5 rounded-full transition-all duration-300",
+                  "text-muted-foreground hover:text-foreground hover:bg-muted",
                   showActions ? "text-primary bg-primary/10 rotate-45 scale-110" : "scale-100"
                 )}
                 aria-label="Mostrar acciones"
@@ -152,14 +150,14 @@ export const ChatInput = React.memo(function ChatInputInner({
                 disabled={isLoading || disabled}
                 className={cn(
                   "w-full resize-none bg-transparent outline-none text-foreground placeholder:text-muted-foreground/70",
-                  "py-3.5 pl-12 pr-12 min-h-[50px]", // Base para móvil
-                  "md:py-4 md:pl-14 md:pr-14 md:text-base md:min-h-[60px]" // Más grande en tablet/desktop
+                  "py-3 pl-12 pr-12 min-h-[50px]", // Base para móvil
+                  "md:py-3.5 md:pl-14 md:pr-14 md:text-base md:min-h-[50px]" // Más grande en tablet/desktop
                 )}
                 maxRows={maxRows}
               />
               
               {/* Área para botones de acción */}
-              <div className="absolute right-3 md:right-4 flex items-center justify-center gap-2">
+              <div className="absolute right-3 md:right-4 flex items-center justify-center gap-1.5">
                 {/* Botón de micrófono */}
                 {onMicrophoneClick && (
                   <TooltipProvider>
@@ -168,13 +166,13 @@ export const ChatInput = React.memo(function ChatInputInner({
                         <Button
                           type="button"
                           size="icon"
-                          variant="ghost"
+                          variant={isListening ? "default" : "ghost"}
                           onClick={onMicrophoneClick}
                           className={cn(
-                            "h-9 w-9 md:h-10 md:w-10 rounded-full transition-all",
+                            "h-8 w-8 rounded-full transition-all",
                             isListening 
-                              ? "text-primary bg-primary/10 animate-pulse" 
-                              : "text-muted-foreground/70 hover:text-foreground hover:bg-muted"
+                              ? "text-primary-foreground bg-primary animate-pulse" 
+                              : "text-muted-foreground hover:text-foreground hover:bg-muted"
                           )}
                           aria-label={isListening ? "Detener grabación" : "Iniciar grabación de voz"}
                         >
@@ -184,7 +182,7 @@ export const ChatInput = React.memo(function ChatInputInner({
                             fill="none" 
                             stroke="currentColor" 
                             strokeWidth="2" 
-                            className="h-4 w-4 md:h-5 md:w-5"
+                            className="h-4 w-4"
                           >
                             <rect x="9" y="2" width="6" height="12" rx="3" />
                             <path d="M5 10a7 7 0 0 0 14 0" />
@@ -209,7 +207,7 @@ export const ChatInput = React.memo(function ChatInputInner({
                         size="icon"
                         disabled={!value.trim() || isLoading || disabled}
                         className={cn(
-                          "h-9 w-9 md:h-10 md:w-10 rounded-full transition-all",
+                          "h-8 w-8 rounded-full transition-all",
                           "bg-primary text-primary-foreground hover:bg-primary/90",
                           "disabled:bg-muted disabled:text-muted-foreground/70"
                         )}
@@ -229,13 +227,13 @@ export const ChatInput = React.memo(function ChatInputInner({
                               strokeWidth="2"
                               strokeLinecap="round"
                               strokeLinejoin="round"
-                              className="h-4 w-4"
+                              className="h-3.5 w-3.5"
                             >
                               <path d="M21 12a9 9 0 1 1-6.219-8.56" />
                             </svg>
                           </motion.div>
                         ) : (
-                          <PaperPlaneIcon className="h-4 w-4 md:h-5 md:w-5 translate-x-[1px] translate-y-[-1px]" />
+                          <PaperPlaneIcon className="h-3.5 w-3.5 translate-x-[1px] translate-y-[-1px]" />
                         )}
                       </Button>
                     </TooltipTrigger>
@@ -249,34 +247,31 @@ export const ChatInput = React.memo(function ChatInputInner({
             <AnimatePresence>
               {showActions && (
                 <motion.div
-                  initial={{ opacity: 0, height: 0, y: -5 }}
-                  animate={{ opacity: 1, height: 'auto', y: 0 }}
-                  exit={{ opacity: 0, height: 0, y: -5 }}
+                  initial={{ opacity: 0, height: 0, y: -10 }}
+                  animate={{ opacity: 1, height: "auto", y: 0 }}
+                  exit={{ opacity: 0, height: 0, y: -10 }}
                   transition={{ duration: 0.2 }}
-                  className="flex items-center gap-2 px-2 overflow-hidden"
+                  className="overflow-hidden"
                 >
-                  <div className="flex overflow-x-auto w-full py-1 scrollbar-hide">
-                    <div className="flex gap-2 px-2">
-                      {actionButtons.map((button, index) => (
-                        <TooltipProvider key={index}>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                type="button"
-                                variant="outline"
-                                className="h-9 rounded-full border-border/40 px-3 py-2 text-sm text-muted-foreground"
-                                onClick={() => {}}
-                                disabled={isLoading || disabled}
-                              >
-                                {button.icon}
-                                <span className="ml-1">{button.label}</span>
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>{button.label}</TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      ))}
-                    </div>
+                  <div className="flex flex-wrap gap-2 p-2 rounded-xl border border-border/50 bg-background shadow-sm">
+                    {actionButtons.map((btn) => (
+                      <TooltipProvider key={btn.label}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/70"
+                            >
+                              {btn.icon}
+                              <span className="ml-2 text-xs font-normal">{btn.label}</span>
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top">{btn.label}</TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    ))}
                   </div>
                 </motion.div>
               )}
