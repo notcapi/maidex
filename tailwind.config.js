@@ -1,11 +1,22 @@
 /** @type {import('tailwindcss').Config} */
+const defaultTheme = require('tailwindcss/defaultTheme');
+
 module.exports = {
     darkMode: ['class'],
     content: [
     './pages/**/*.{js,ts,jsx,tsx}',
     './components/**/*.{js,ts,jsx,tsx}',
+    './app/**/*.{ts,tsx}',
+    './src/**/*.{ts,tsx}',
   ],
   theme: {
+  	container: {
+  		center: true,
+  		padding: "2rem",
+  		screens: {
+  			"2xl": "1400px",
+  		},
+  	},
   	extend: {
   		borderRadius: {
   			lg: 'var(--radius)',
@@ -52,7 +63,17 @@ module.exports = {
   				'3': 'hsl(var(--chart-3))',
   				'4': 'hsl(var(--chart-4))',
   				'5': 'hsl(var(--chart-5))'
-  			}
+  			},
+  			'primary-50': '#f0f6ff',
+  			'primary-100': '#dfeaff',
+  			'primary-200': '#c6d9ff',
+  			'primary-300': '#a4c1ff',
+  			'primary-400': '#7e9fff',
+  			'primary-500': '#5f7eff',
+  			'primary-600': '#3b57f5',
+  			'primary-700': '#2d44e5',
+  			'primary-800': '#2639bd',
+  			'primary-900': '#263494',
   		}
   	}
   },
