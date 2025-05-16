@@ -49,23 +49,25 @@ const Navigation = () => {
               <span className="text-foreground dark:text-slate-100 text-xl font-bold">Maidex</span>
             </div>
             <div className="hidden md:block ml-6">
-              <NavigationMenuList className="flex space-x-2">
-                {navigationItems.map((item) => (
-                  <NavigationMenuItem key={item.name}>
-                    <Link href={item.href} passHref legacyBehavior>
-                      <NavigationMenuLink
-                        className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                          router.pathname === item.href
-                            ? 'bg-primary/10 text-primary dark:text-slate-200 dark:bg-slate-800'
-                            : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground dark:text-slate-400 dark:hover:bg-slate-800'
-                        }`}
-                      >
-                        {item.name}
-                      </NavigationMenuLink>
-                    </Link>
-                  </NavigationMenuItem>
-                ))}
-              </NavigationMenuList>
+              <NavigationMenu>
+                <NavigationMenuList className="flex space-x-2">
+                  {navigationItems.map((item) => (
+                    <NavigationMenuItem key={item.name}>
+                      <Link href={item.href} passHref legacyBehavior>
+                        <NavigationMenuLink
+                          className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                            router.pathname === item.href
+                              ? 'bg-primary/10 text-primary dark:text-slate-200 dark:bg-slate-800'
+                              : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground dark:text-slate-400 dark:hover:bg-slate-800'
+                          }`}
+                        >
+                          {item.name}
+                        </NavigationMenuLink>
+                      </Link>
+                    </NavigationMenuItem>
+                  ))}
+                </NavigationMenuList>
+              </NavigationMenu>
             </div>
           </div>
           <div className="hidden md:block">
