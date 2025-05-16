@@ -409,4 +409,82 @@ export class DriveAgent {
       };
     }
   }
+
+  /**
+   * Ejecuta una operación específica en Google Drive
+   * @param accessToken Token de acceso OAuth
+   * @param operationDetails Detalles de la operación a realizar
+   * @returns Resultado de la operación
+   */
+  async performOperation(accessToken: string, operationDetails: any) {
+    if (!operationDetails || !operationDetails.operation) {
+      return {
+        success: false,
+        error: 'Operación no especificada'
+      };
+    }
+    
+    try {
+      switch (operationDetails.operation) {
+        case 'list':
+          return await this.listFiles(accessToken, {
+            folderId: operationDetails.folderId,
+            limit: operationDetails.limit || 10
+          });
+          
+        case 'search':
+          const searchResult = await this.searchFiles(accessToken, {
+            query: operationDetails.query,
+            limit: operationDetails.limit || 10
+          });
+          
+          // Si se solicitó incluir enlaces de descarga
+          if (operationDetails.includeDownloadLink && searchResult.success && searchResult.files && searchResult.files.length > 0) {
+            const fileId = searchResult.files[0].id;
+            const fileDetails = await this.getFile(accessToken, fileId, true);
+            
+            return {
+              ...searchResult,
+              fileDetails
+            };
+          }
+          
+          return searchResult;
+          
+        case 'get':
+          return await this.getFile(accessToken, operationDetails.fileId, operationDetails.rawDownload || false);
+          
+        case 'create':
+          return await this.createFile(accessToken, {
+            name: operationDetails.name,
+            content: operationDetails.content || '',
+            mimeType: operationDetails.mimeType || 'text/plain',
+            folderId: operationDetails.folderId
+          });
+          
+        case 'update':
+          return await this.updateFile(accessToken, {
+            fileId: operationDetails.fileId,
+            name: operationDetails.name,
+            content: operationDetails.content,
+            mimeType: operationDetails.mimeType || 'text/plain'
+          });
+          
+        case 'delete':
+          return await this.deleteFile(accessToken, operationDetails.fileId);
+          
+        default:
+          return {
+            success: false,
+            error: `Operación no soportada: ${operationDetails.operation}`
+          };
+      }
+    } catch (error: any) {
+      console.error('Error al ejecutar operación de Drive:', error);
+      return {
+        success: false,
+        error: error.message || 'Error al ejecutar la operación'
+      };
+    }
+  }
 } 
